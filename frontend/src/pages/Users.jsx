@@ -48,9 +48,10 @@ export default function Users() {
               <input placeholder="Nombre completo" value={form.name} onChange={(e) => setForm({...form, name: e.target.value})} required />
               <input type="password" placeholder="Contraseña" value={form.password} onChange={(e) => setForm({...form, password: e.target.value})} required />
               <select value={form.role} onChange={(e) => setForm({...form, role: e.target.value})}>
-                <option value="user">Usuario</option>
+                <option value="user">Usuario (Equipo)</option>
                 <option value="admin">Admin</option>
                 <option value="viewer">Visor</option>
+                <option value="client">Cliente (Portal)</option>
               </select>
             </div>
             <button className="btn primary" onClick={handleSave}>Crear</button>

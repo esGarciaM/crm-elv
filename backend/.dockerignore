@@ -1,0 +1,6 @@
+node_modules
+.git
+*.md
+crm.db
+crm.db-shm
+crm.db-wal

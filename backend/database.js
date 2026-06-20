@@ -5,7 +5,8 @@ import { dirname, join } from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
-const db = new Database(join(__dirname, 'crm.db'));
+const DB_PATH = process.env.DB_PATH || join(__dirname, 'crm.db');
+const db = new Database(DB_PATH);
 
 db.pragma('journal_mode = WAL');
 db.pragma('foreign_keys = ON');
@@ -16,7 +17,7 @@ db.exec(`
     username TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
     name TEXT NOT NULL,
-    role TEXT NOT NULL DEFAULT 'user' CHECK(role IN ('admin','user','viewer')),
+    role TEXT NOT NULL DEFAULT 'user' CHECK(role IN ('admin','user','viewer','client')),
     active INTEGER NOT NULL DEFAULT 1,
     created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
@@ -39,6 +40,7 @@ db.exec(`
     tickets_delivered TEXT,
     logo_requested TEXT,
     notes TEXT,
+    client_user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
     created_by INTEGER REFERENCES users(id),
     created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
@@ -65,6 +67,40 @@ db.exec(`
     comment TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
   );
+
+  CREATE TABLE IF NOT EXISTS documents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_id INTEGER NOT NULL REFERENCES clients(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    original_name TEXT NOT NULL,
+    mime_type TEXT NOT NULL,
+    size INTEGER NOT NULL,
+    visibility TEXT NOT NULL DEFAULT 'private' CHECK(visibility IN ('public','private')),
+    uploaded_by INTEGER REFERENCES users(id),
+    category TEXT DEFAULT 'general',
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  );
+
+  CREATE TABLE IF NOT EXISTS document_comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    document_id INTEGER NOT NULL REFERENCES documents(id) ON DELETE CASCADE,
+    user_id INTEGER NOT NULL REFERENCES users(id),
+    comment TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  );
 `);
+
+// Safe migration helper
+function addColumn(table, column, definition) {
+  try {
+    db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${definition}`);
+  } catch (e) {
+    // column already exists
+  }
+}
+
+addColumn('users', 'role', "TEXT NOT NULL DEFAULT 'user'");
+addColumn('clients', 'client_user_id', 'INTEGER REFERENCES users(id) ON DELETE SET NULL');
+addColumn('documents', 'visibility', "TEXT NOT NULL DEFAULT 'private' CHECK(visibility IN ('public','private'))");
 
 export default db;

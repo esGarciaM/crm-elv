@@ -19,7 +19,7 @@ router.get('/', authMiddleware, (req, res) => {
   }
 
   const total = db.prepare(`SELECT COUNT(*) as count FROM clients ${where}`).get(...params).count;
-  const clients = db.prepare(`SELECT * FROM clients ${where} ORDER BY company_name LIMIT ? OFFSET ?`).all(...params, limit, offset);
+  const clients = db.prepare(`SELECT c.*, u.username as client_username FROM clients c LEFT JOIN users u ON c.client_user_id = u.id ${where} ORDER BY c.company_name LIMIT ? OFFSET ?`).all(...params, limit, offset);
 
   res.json({ clients, total, page, totalPages: Math.ceil(total / limit) });
 });
@@ -42,20 +42,20 @@ router.post('/', authMiddleware, (req, res) => {
     company_name, contact_person, phone, sponsorship_type, package: pkg,
     visit_status, payment_status, student_obtained, student_contacted,
     in_kind_detail, payment_detail, social_media_fulfilled, tickets_delivered,
-    logo_requested, notes
+    logo_requested, notes, client_user_id
   } = req.body;
 
   const result = db.prepare(`
     INSERT INTO clients (company_name, contact_person, phone, sponsorship_type, package,
       visit_status, payment_status, student_obtained, student_contacted,
       in_kind_detail, payment_detail, social_media_fulfilled, tickets_delivered,
-      logo_requested, notes, created_by)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      logo_requested, notes, client_user_id, created_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     company_name, contact_person, phone, sponsorship_type, pkg,
     visit_status, payment_status, student_obtained, student_contacted,
     in_kind_detail, payment_detail, social_media_fulfilled, tickets_delivered,
-    logo_requested, notes, req.user.id
+    logo_requested, notes, client_user_id || null, req.user.id
   );
 
   res.status(201).json({ id: result.lastInsertRowid });
@@ -69,7 +69,7 @@ router.put('/:id', authMiddleware, (req, res) => {
     'company_name', 'contact_person', 'phone', 'sponsorship_type', 'package',
     'visit_status', 'payment_status', 'student_obtained', 'student_contacted',
     'in_kind_detail', 'payment_detail', 'social_media_fulfilled', 'tickets_delivered',
-    'logo_requested', 'notes'
+    'logo_requested', 'notes', 'client_user_id'
   ];
 
   const updates = [];

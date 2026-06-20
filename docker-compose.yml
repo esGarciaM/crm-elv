@@ -1,0 +1,29 @@
+services:
+  backend:
+    build: ./backend
+    container_name: crm-backend
+    ports:
+      - "3001:3001"
+    volumes:
+      - backend_uploads:/app/uploads
+      - backend_db:/app/data
+    environment:
+      - PORT=3001
+      - DB_PATH=/app/data/crm.db
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: /api
+    container_name: crm-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  backend_uploads:
+  backend_db:
