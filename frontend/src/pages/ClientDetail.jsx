@@ -17,7 +17,7 @@ function iconFor(mime) {
   return '📎';
 }
 
-const API = 'http://localhost:3001';
+const API = '';
 
 export default function ClientDetail() {
   const { id } = useParams();
@@ -193,7 +193,7 @@ export default function ClientDetail() {
                 <div className="doc-item">
                   <span className="doc-icon">{iconFor(d.mime_type)}</span>
                   <div className="doc-info">
-                    <a href={`${API}/api/documents/download/${d.id}`} target="_blank" rel="noopener noreferrer" className="doc-name">{d.original_name}</a>
+                    <a href={`/api/documents/download/${d.id}`} target="_blank" rel="noopener noreferrer" className="doc-name">{d.original_name}</a>
                     <span className="doc-meta">{fmtSize(d.size)} · {d.category} · {d.uploaded_by_name || '—'} · {d.created_at}</span>
                   </div>
                   <div className="doc-actions">

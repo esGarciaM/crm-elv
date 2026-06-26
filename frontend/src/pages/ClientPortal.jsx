@@ -73,7 +73,7 @@ export default function ClientPortal() {
                 <div className="doc-item">
                   <span className="doc-icon">{iconFor(d.mime_type)}</span>
                   <div className="doc-info">
-                    <a href={`http://localhost:3001/api/documents/download/${d.id}`} target="_blank" rel="noopener noreferrer" className="doc-name">{d.original_name}</a>
+                    <a href={`/api/documents/download/${d.id}`} target="_blank" rel="noopener noreferrer" className="doc-name">{d.original_name}</a>
                     <span className="doc-meta">{fmtSize(d.size)} · {d.category} · subido por {d.uploaded_by_name || '—'} · {d.created_at}</span>
                   </div>
                   <button className="btn small" onClick={() => toggleComments(d.id)}>
