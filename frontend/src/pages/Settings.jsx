@@ -5,17 +5,21 @@ export default function Settings() {
   const [tab, setTab] = useState('departments');
   const [departments, setDepartments] = useState([]);
   const [employees, setEmployees] = useState([]);
+  const [docTypes, setDocTypes] = useState([]);
   const [showDeptModal, setShowDeptModal] = useState(false);
   const [showEmpModal, setShowEmpModal] = useState(false);
+  const [showDocTypeModal, setShowDocTypeModal] = useState(false);
   const [deptForm, setDeptForm] = useState({ name: '', description: '' });
   const [empForm, setEmpForm] = useState({ first_name: '', last_name: '', email: '', phone: '', department_id: '' });
+  const [docTypeForm, setDocTypeForm] = useState({ name: '' });
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState('');
 
   const loadDepts = () => api.get('/departments').then(r => setDepartments(r.data));
   const loadEmps = () => api.get('/employees').then(r => setEmployees(r.data));
+  const loadDocTypes = () => api.get('/document-types').then(r => setDocTypes(r.data));
 
-  useEffect(() => { loadDepts(); loadEmps(); }, []);
+  useEffect(() => { loadDepts(); loadEmps(); loadDocTypes(); }, []);
 
   const saveDept = async () => {
     if (!deptForm.name.trim()) return;
@@ -82,6 +86,7 @@ export default function Settings() {
       <div className="filter-bar">
         <button className={`filter-btn ${tab === 'departments' ? 'active' : ''}`} onClick={() => setTab('departments')}>Departamentos</button>
         <button className={`filter-btn ${tab === 'employees' ? 'active' : ''}`} onClick={() => setTab('employees')}>Empleados</button>
+        <button className={`filter-btn ${tab === 'docTypes' ? 'active' : ''}`} onClick={() => setTab('docTypes')}>Tipos de Documento</button>
       </div>
 
       {tab === 'departments' && (
@@ -148,6 +153,51 @@ export default function Settings() {
               <textarea className="full-width" placeholder="Descripción" value={deptForm.description} onChange={e => setDeptForm({ ...deptForm, description: e.target.value })} />
             </div>
             <button className="btn primary" onClick={saveDept}>{editingId ? 'Actualizar' : 'Crear'}</button>
+          </div>
+        </div>
+      )}
+
+      {tab === 'docTypes' && (
+        <div className="card">
+          <div className="docs-header">
+            <h2>Tipos de Documento</h2>
+            <button className="btn" onClick={() => { setDocTypeForm({ name: '' }); setEditingId(null); setShowDocTypeModal(true); }}>+ Nuevo</button>
+          </div>
+          <table>
+            <thead><tr><th>Nombre</th><th>Acciones</th></tr></thead>
+            <tbody>
+              {docTypes.map(d => (
+                <tr key={d.id}>
+                  <td>{d.name}</td>
+                  <td>
+                    <button className="btn small" onClick={() => { setDocTypeForm({ name: d.name }); setEditingId(d.id); setShowDocTypeModal(true); }}>Editar</button>
+                    <button className="btn small danger" style={{ marginLeft: '.5rem' }} onClick={async () => { if (confirm('¿Eliminar tipo de documento?')) { await api.delete(`/document-types/${d.id}`); loadDocTypes(); }}}>Eliminar</button>
+                  </td>
+                </tr>
+              ))}
+              {docTypes.length === 0 && <tr><td colSpan="2" className="empty-state">Sin tipos de documento</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {showDocTypeModal && (
+        <div className="modal-overlay" onClick={() => setShowDocTypeModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h2>{editingId ? 'Editar' : 'Nuevo'} Tipo de Documento</h2>
+            {error && <div className="error-msg">{error}</div>}
+            <div className="form-grid">
+              <input className="full-width" placeholder="Nombre" value={docTypeForm.name} onChange={e => setDocTypeForm({ ...docTypeForm, name: e.target.value })} required />
+            </div>
+            <button className="btn primary" onClick={async () => {
+              if (!docTypeForm.name.trim()) return;
+              setError('');
+              try {
+                if (editingId) { await api.put(`/document-types/${editingId}`, docTypeForm); }
+                else { await api.post('/document-types', docTypeForm); }
+                setShowDocTypeModal(false); setDocTypeForm({ name: '' }); setEditingId(null); loadDocTypes();
+              } catch (e) { setError(e.response?.data?.error || 'Error'); }
+            }}>{editingId ? 'Actualizar' : 'Crear'}</button>
           </div>
         </div>
       )}

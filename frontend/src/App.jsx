@@ -10,6 +10,7 @@ import Tasks from './pages/Tasks';
 import Users from './pages/Users';
 import Finance from './pages/Finance';
 import Settings from './pages/Settings';
+import Communications from './pages/Communications';
 import ClientPortal from './pages/ClientPortal';
 
 function AppContent() {
@@ -37,6 +38,7 @@ function AppContent() {
         <Route path="/tasks" element={<Tasks />} />
         <Route path="/users" element={<PrivateRoute roles={['admin']}><Users /></PrivateRoute>} />
         <Route path="/finance" element={<Finance />} />
+        <Route path="/communications" element={<Communications />} />
         <Route path="/settings" element={<PrivateRoute roles={['admin']}><Settings /></PrivateRoute>} />
         <Route path="/portal" element={<Navigate to="/" />} />
       </Routes>

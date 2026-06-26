@@ -8,6 +8,8 @@ import clientPortalRoutes from './routes/clientPortal.js';
 import departmentRoutes from './routes/departments.js';
 import employeeRoutes from './routes/employees.js';
 import expenseRoutes from './routes/expenses.js';
+import documentTypeRoutes from './routes/documentTypes.js';
+import communicationRoutes from './routes/communications.js';
 import db from './database.js';
 import bcrypt from 'bcryptjs';
 
@@ -33,6 +35,8 @@ app.use('/api/client-portal', clientPortalRoutes);
 app.use('/api/departments', departmentRoutes);
 app.use('/api/employees', employeeRoutes);
 app.use('/api/expenses', expenseRoutes);
+app.use('/api/document-types', documentTypeRoutes);
+app.use('/api/communications', communicationRoutes);
 
 app.get('/api/stats', (req, res) => {
   // ── Client / Finance ──
