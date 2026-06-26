@@ -103,4 +103,65 @@ addColumn('users', 'role', "TEXT NOT NULL DEFAULT 'user'");
 addColumn('clients', 'client_user_id', 'INTEGER REFERENCES users(id) ON DELETE SET NULL');
 addColumn('documents', 'visibility', "TEXT NOT NULL DEFAULT 'private' CHECK(visibility IN ('public','private'))");
 
+db.exec(`
+  CREATE TABLE IF NOT EXISTS departments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT UNIQUE NOT NULL,
+    description TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  );
+
+  CREATE TABLE IF NOT EXISTS employees (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    first_name TEXT NOT NULL,
+    last_name TEXT NOT NULL,
+    email TEXT,
+    phone TEXT,
+    department_id INTEGER REFERENCES departments(id) ON DELETE SET NULL,
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  );
+
+  CREATE TABLE IF NOT EXISTS expenses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    responsible_name TEXT NOT NULL,
+    concept TEXT NOT NULL,
+    description TEXT,
+    justification TEXT,
+    amount REAL NOT NULL,
+    required_date TEXT,
+    quote_date TEXT,
+    impact_if_not_done TEXT,
+    department_id INTEGER REFERENCES departments(id) ON DELETE SET NULL,
+    status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending','approved','rejected','paid')),
+    created_by INTEGER REFERENCES users(id),
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  );
+
+  CREATE TABLE IF NOT EXISTS expense_files (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    expense_id INTEGER NOT NULL REFERENCES expenses(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    original_name TEXT NOT NULL,
+    mime_type TEXT NOT NULL,
+    size INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  );
+`);
+
+// Seed departments
+const deptExists = db.prepare('SELECT id FROM departments LIMIT 1').get();
+if (!deptExists) {
+  const departments = [
+    'Diseño', 'Redes', 'Decoración', 'Logística',
+    'Patrocinio', 'Producción Audiovisual', 'Comunicados'
+  ];
+  const insert = db.prepare('INSERT INTO departments (name) VALUES (?)');
+  for (const d of departments) insert.run(d);
+  console.log('Default departments created');
+}
+
 export default db;

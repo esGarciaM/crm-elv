@@ -11,12 +11,17 @@ export function generateToken(user) {
 }
 
 export function authMiddleware(req, res, next) {
+  let token = null;
   const header = req.headers.authorization;
-  if (!header || !header.startsWith('Bearer ')) {
+  if (header && header.startsWith('Bearer ')) {
+    token = header.split(' ')[1];
+  } else if (req.query.token) {
+    token = req.query.token;
+  }
+  if (!token) {
     return res.status(401).json({ error: 'Token requerido' });
   }
   try {
-    const token = header.split(' ')[1];
     req.user = jwt.verify(token, JWT_SECRET);
     next();
   } catch {
