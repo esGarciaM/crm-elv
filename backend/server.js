@@ -10,6 +10,10 @@ import employeeRoutes from './routes/employees.js';
 import expenseRoutes from './routes/expenses.js';
 import documentTypeRoutes from './routes/documentTypes.js';
 import communicationRoutes from './routes/communications.js';
+import packageRoutes from './routes/packages.js';
+import patrocinioRoutes from './routes/patrocinios.js';
+import patrocinioSeguimientoRoutes from './routes/patrocinio-seguimiento.js';
+import { authMiddleware } from './middleware/auth.js';
 import db from './database.js';
 import bcrypt from 'bcryptjs';
 
@@ -37,6 +41,15 @@ app.use('/api/employees', employeeRoutes);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/document-types', documentTypeRoutes);
 app.use('/api/communications', communicationRoutes);
+app.use('/api/packages', packageRoutes);
+app.use('/api/patrocinios', patrocinioRoutes);
+app.use('/api', patrocinioSeguimientoRoutes);
+
+// Simple endpoint to list active users for assignment dropdowns
+app.get('/api/users', authMiddleware, (req, res) => {
+  const users = db.prepare("SELECT id, name, role FROM users WHERE active = 1 ORDER BY name").all();
+  res.json(users);
+});
 
 app.get('/api/stats', (req, res) => {
   // ── Client / Finance ──
@@ -102,6 +115,26 @@ app.get('/api/stats', (req, res) => {
     ORDER BY u.name
   `).all();
 
+  // ── Patrocinios Stats ──
+  const totalPatrocinios = db.prepare('SELECT COUNT(*) as count FROM patrocinios').get().count;
+  const patrociniosPkg = db.prepare("SELECT package, payment_status, sponsorship_type FROM patrocinios WHERE package IS NOT NULL AND package != ''").all();
+  let patrociniosEstimated = 0;
+  let patrociniosPagado = 0;
+  let patrociniosPendiente = 0;
+  let patrociniosAbonado = 0;
+  let patrociniosInKind = 0;
+
+  for (const p of patrociniosPkg) {
+    const m = p.package.match(/\$*(\d[\d,]*)/);
+    const amt = m ? parseInt(m[1].replace(/,/g, '')) : 0;
+    patrociniosEstimated += amt;
+    if (p.sponsorship_type && p.sponsorship_type.toLowerCase().includes('especie')) patrociniosInKind += amt;
+    const st = p.payment_status || 'Pendiente';
+    if (st === 'Pagado') patrociniosPagado += amt;
+    else if (st === 'Pendiente') patrociniosPendiente += amt;
+    else if (st === 'Abonado') patrociniosAbonado += amt;
+  }
+
   res.json({
     // Clients / Finance
     totalClients,
@@ -114,6 +147,13 @@ app.get('/api/stats', (req, res) => {
     totalAbonado,
     inKindCount,
     inKindEstimated,
+    // Patrocinios
+    totalPatrocinios,
+    patrociniosEstimated,
+    patrociniosPagado,
+    patrociniosPendiente,
+    patrociniosAbonado,
+    patrociniosInKind,
     // Tasks
     tasksTotal,
     tasksPending,

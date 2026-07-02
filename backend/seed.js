@@ -5,6 +5,8 @@ import { randomUUID } from 'crypto';
 console.log('🌱 Seeding sample data...');
 
 // ── Clean existing data ──
+db.exec('DELETE FROM patrocinio_documents');
+db.exec('DELETE FROM patrocinios');
 db.exec('DELETE FROM task_comments');
 db.exec('DELETE FROM tasks');
 db.exec('DELETE FROM clients');

@@ -1,0 +1,6 @@
+FACTURA
+
+Cliente: Jei Coquetas
+Concepto: Patrocinio Origen
+Monto: $1,000
+Estatus: PAGADO

@@ -102,6 +102,7 @@ function addColumn(table, column, definition) {
 addColumn('users', 'role', "TEXT NOT NULL DEFAULT 'user'");
 addColumn('clients', 'client_user_id', 'INTEGER REFERENCES users(id) ON DELETE SET NULL');
 addColumn('documents', 'visibility', "TEXT NOT NULL DEFAULT 'private' CHECK(visibility IN ('public','private'))");
+addColumn('tasks', 'patrocinio_id', 'INTEGER REFERENCES patrocinios(id) ON DELETE SET NULL');
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS departments (
@@ -153,6 +154,48 @@ db.exec(`
 `);
 
 db.exec(`
+  CREATE TABLE IF NOT EXISTS patrocinios (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    company_name TEXT,
+    contact_person TEXT,
+    phone TEXT,
+    sponsorship_type TEXT,
+    package TEXT,
+    visit_status TEXT,
+    payment_status TEXT,
+    student_obtained TEXT,
+    student_contacted TEXT,
+    in_kind_detail TEXT,
+    payment_detail TEXT,
+    social_media_fulfilled TEXT,
+    tickets_delivered TEXT,
+    logo_requested TEXT,
+    notes TEXT,
+    created_by INTEGER REFERENCES users(id),
+    updated_by INTEGER REFERENCES users(id),
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  );
+`);
+
+// Safe migration for existing patrocinios table
+addColumn('patrocinios', 'updated_by', 'INTEGER REFERENCES users(id)');
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS patrocinio_documents (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    patrocinio_id INTEGER NOT NULL REFERENCES patrocinios(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    original_name TEXT NOT NULL,
+    mime_type TEXT NOT NULL,
+    size INTEGER NOT NULL,
+    category TEXT DEFAULT 'general',
+    uploaded_by INTEGER REFERENCES users(id),
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  );
+`);
+
+db.exec(`
   CREATE TABLE IF NOT EXISTS document_types (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT UNIQUE NOT NULL,
@@ -184,6 +227,121 @@ db.exec(`
   );
 `);
 
+// ─── Packages catalog ──
+db.exec(`
+  CREATE TABLE IF NOT EXISTS packages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT UNIQUE NOT NULL,
+    amount REAL,
+    type TEXT CHECK(type IN ('monetario','especie','mixto')),
+    sort_order INTEGER DEFAULT 0,
+    active INTEGER NOT NULL DEFAULT 1,
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  );
+`);
+
+// Seed packages
+const pkgExists = db.prepare('SELECT id FROM packages LIMIT 1').get();
+if (!pkgExists) {
+  const pkgs = [
+    ['Origen ($$1000)', 1000, 'monetario', 1],
+    ['Origen E (1000)', 1000, 'especie', 2],
+    ['Presente ($$2500)', 2500, 'monetario', 3],
+    ['Presente E (3000)', 3000, 'especie', 4],
+    ['Futuro ($$3500)', 3500, 'monetario', 5],
+    ['Futuro E (4500)', 4500, 'especie', 6],
+    ['Legado ($$6000)', 6000, 'monetario', 7],
+    ['Legado E (6500)', 6500, 'especie', 8],
+  ];
+  const insert = db.prepare('INSERT INTO packages (name, amount, type, sort_order) VALUES (?, ?, ?, ?)');
+  for (const p of pkgs) insert.run(...p);
+  console.log('Default packages created');
+}
+
+// ─── Package checklist items ──
+db.exec(`
+  CREATE TABLE IF NOT EXISTS package_checklist_items (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    key TEXT UNIQUE NOT NULL,
+    label TEXT NOT NULL,
+    sort_order INTEGER DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  );
+
+  CREATE TABLE IF NOT EXISTS package_checklist (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    package_id INTEGER NOT NULL REFERENCES packages(id) ON DELETE CASCADE,
+    item_id INTEGER NOT NULL REFERENCES package_checklist_items(id) ON DELETE CASCADE,
+    UNIQUE(package_id, item_id)
+  );
+`);
+
+const chkExists = db.prepare('SELECT id FROM package_checklist_items LIMIT 1').get();
+if (!chkExists) {
+  const items = [
+    ['welcome_post', 'Post de bienvenida', 10],
+    ['event_ticket', 'Boleto al evento', 20],
+    ['promo_post', 'Post promocional en redes sociales del simposio', 30],
+    ['logo_main_banner', 'Logo en lona principal', 40],
+    ['event_day_mention', 'Mención el día del evento', 50],
+    ['company_social_post', 'Elaboración de un post para redes de la empresa', 60],
+    ['vacancy_promotion', 'Difusión de vacantes u oferta en redes sociales del simposio', 70],
+    ['marketing_workshop', 'Acceso a taller de marketing', 80],
+    ['logo_event_screen', 'Logo en pantalla del evento', 90],
+    ['kit_relindo', 'KIT relindo oficial', 100],
+    ['social_story_design', '1 diseño para historia para redes sociales de la empresa', 110],
+    ['promo_video_30s', '1 video promocional en redes (30 seg max)', 120],
+    ['lobby_activation', 'Espacio para activación en el lobby del evento', 130],
+    ['promo_video_1min', 'Video promocional en redes sociales (1 min max)', 140],
+    ['press_conference', 'Rueda de prensa', 150],
+    ['sponsor_brunch', 'Brunch con patrocinadores', 160],
+    ['photo_with_speakers', 'Foto con conferencistas oficiales', 170],
+  ];
+  const insert = db.prepare('INSERT INTO package_checklist_items (key, label, sort_order) VALUES (?, ?, ?)');
+  for (const it of items) insert.run(...it);
+  console.log('Default package checklist items created');
+} else {
+  // Migration: replace existing items with the new set
+  const newKeys = [
+    'welcome_post', 'event_ticket', 'promo_post', 'logo_main_banner',
+    'event_day_mention', 'company_social_post', 'vacancy_promotion',
+    'marketing_workshop', 'logo_event_screen', 'kit_relindo',
+    'social_story_design', 'promo_video_30s', 'lobby_activation',
+    'promo_video_1min', 'press_conference', 'sponsor_brunch', 'photo_with_speakers'
+  ];
+  const existingKeys = db.prepare('SELECT key FROM package_checklist_items').all().map(r => r.key);
+  if (existingKeys.length !== newKeys.length || existingKeys.some(k => !newKeys.includes(k))) {
+    const txn = db.transaction(() => {
+      db.exec('DELETE FROM package_checklist');
+      db.exec('DELETE FROM package_checklist_items');
+      const items = [
+        ['welcome_post', 'Post de bienvenida', 10],
+        ['event_ticket', 'Boleto al evento', 20],
+        ['promo_post', 'Post promocional en redes sociales del simposio', 30],
+        ['logo_main_banner', 'Logo en lona principal', 40],
+        ['event_day_mention', 'Mención el día del evento', 50],
+        ['company_social_post', 'Elaboración de un post para redes de la empresa', 60],
+        ['vacancy_promotion', 'Difusión de vacantes u oferta en redes sociales del simposio', 70],
+        ['marketing_workshop', 'Acceso a taller de marketing', 80],
+        ['logo_event_screen', 'Logo en pantalla del evento', 90],
+        ['kit_relindo', 'KIT relindo oficial', 100],
+        ['social_story_design', '1 diseño para historia para redes sociales de la empresa', 110],
+        ['promo_video_30s', '1 video promocional en redes (30 seg max)', 120],
+        ['lobby_activation', 'Espacio para activación en el lobby del evento', 130],
+        ['promo_video_1min', 'Video promocional en redes sociales (1 min max)', 140],
+        ['press_conference', 'Rueda de prensa', 150],
+        ['sponsor_brunch', 'Brunch con patrocinadores', 160],
+        ['photo_with_speakers', 'Foto con conferencistas oficiales', 170],
+      ];
+      const insert = db.prepare('INSERT INTO package_checklist_items (key, label, sort_order) VALUES (?, ?, ?)');
+      for (const it of items) insert.run(...it);
+    });
+    txn();
+    console.log('Package checklist items migrated');
+  }
+}
+
 // Seed document_types
 const docTypeExists = db.prepare('SELECT id FROM document_types LIMIT 1').get();
 if (!docTypeExists) {
@@ -203,6 +361,37 @@ if (!deptExists) {
   const insert = db.prepare('INSERT INTO departments (name) VALUES (?)');
   for (const d of departments) insert.run(d);
   console.log('Default departments created');
+}
+
+// ─── Patrocinio tracking (checklist + comments) ──
+db.exec(`
+  CREATE TABLE IF NOT EXISTS patrocinio_checklist (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    patrocinio_id INTEGER NOT NULL REFERENCES patrocinios(id) ON DELETE CASCADE,
+    item_id INTEGER NOT NULL REFERENCES package_checklist_items(id) ON DELETE CASCADE,
+    completed INTEGER NOT NULL DEFAULT 0,
+    completed_at TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+    UNIQUE(patrocinio_id, item_id)
+  );
+
+  CREATE TABLE IF NOT EXISTS patrocinio_comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    patrocinio_id INTEGER NOT NULL REFERENCES patrocinios(id) ON DELETE CASCADE,
+    comment TEXT NOT NULL,
+    created_by INTEGER REFERENCES users(id),
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  );
+`);
+
+// Migration: add columns for soft-delete and file attachments
+const commentCols = db.prepare("PRAGMA table_info(patrocinio_comments)").all().map(c => c.name);
+if (!commentCols.includes('deleted')) {
+  db.exec("ALTER TABLE patrocinio_comments ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0");
+  db.exec("ALTER TABLE patrocinio_comments ADD COLUMN deleted_by INTEGER REFERENCES users(id)");
+  db.exec("ALTER TABLE patrocinio_comments ADD COLUMN deleted_at TEXT");
+  db.exec("ALTER TABLE patrocinio_comments ADD COLUMN file_url TEXT");
+  db.exec("ALTER TABLE patrocinio_comments ADD COLUMN file_name TEXT");
 }
 
 export default db;

@@ -1,0 +1,6 @@
+RECIBO DE PAGO
+
+Cliente: The Snack Club
+Monto: $1,000
+Método: Transferencia
+Fecha: 15/10/2025
