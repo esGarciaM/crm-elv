@@ -92,16 +92,26 @@ router.delete('/contributions/:id', authMiddleware, (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════
 
 router.get('/sponsorships', authMiddleware, (req, res) => {
-  const { from, to } = req.query;
+  const { from, to, sponsorship_type, payment_status, visit_status, student_obtained, student_contacted, q } = req.query;
   let where = [];
   const params = [];
-  if (from) { where.push('created_at >= ?'); params.push(from); }
-  if (to) { where.push('created_at <= ?'); params.push(to + ' 23:59:59'); }
+  if (from) { where.push('p.created_at >= ?'); params.push(from); }
+  if (to) { where.push('p.created_at <= ?'); params.push(to + ' 23:59:59'); }
+  if (sponsorship_type) { where.push('p.sponsorship_type = ?'); params.push(sponsorship_type); }
+  if (payment_status) { where.push('p.payment_status = ?'); params.push(payment_status); }
+  if (visit_status) { where.push('p.visit_status = ?'); params.push(visit_status); }
+  if (student_obtained) { where.push('p.student_obtained LIKE ?'); params.push('%' + student_obtained + '%'); }
+  if (student_contacted) { where.push('p.student_contacted LIKE ?'); params.push('%' + student_contacted + '%'); }
+  if (q) {
+    where.push('(p.company_name LIKE ? OR p.contact_person LIKE ? OR p.package LIKE ?)');
+    params.push('%' + q + '%', '%' + q + '%', '%' + q + '%');
+  }
 
   const whereClause = where.length ? 'WHERE ' + where.join(' AND ') : '';
   const rows = db.prepare(`
     SELECT p.id, p.company_name, p.contact_person, p.phone,
            p.sponsorship_type, p.package, p.payment_status, p.payment_detail,
+           p.visit_status, p.student_obtained, p.student_contacted,
            p.created_at as date
     FROM patrocinios p ${whereClause}
     ORDER BY p.created_at DESC
@@ -278,12 +288,14 @@ router.get('/solicitudes/download/:fileId', authMiddleware, (req, res) => {
 // ═══════════════════════════════════════════════════════════════════════════
 
 router.get('/expenses', authMiddleware, (req, res) => {
-  const { committee, from, to } = req.query;
+  const { committee, from, to, responsible, q } = req.query;
   let where = [];
   const params = [];
   if (committee) { where.push('fe.committee = ?'); params.push(committee); }
   if (from) { where.push('fe.date >= ?'); params.push(from); }
   if (to) { where.push('fe.date <= ?'); params.push(to); }
+  if (responsible) { where.push('fe.responsible LIKE ?'); params.push('%' + responsible + '%'); }
+  if (q) { where.push('(fe.concept LIKE ? OR fe.notes LIKE ?)'); params.push('%' + q + '%', '%' + q + '%'); }
 
   const whereClause = where.length ? 'WHERE ' + where.join(' AND ') : '';
   const rows = db.prepare(`

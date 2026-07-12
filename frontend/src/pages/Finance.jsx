@@ -232,10 +232,34 @@ function TabAportaciones() {
 // ═══════════════════════════════════════════════════════════════════════════
 function TabPatrocinios() {
   const [data, setData] = useState({ sponsorships: [], totalCash: 0, totalKind: 0, totalGeneral: 0 });
+  const [filters, setFilters] = useState({
+    sponsorship_type: '', payment_status: '', visit_status: '',
+    student_obtained: '', student_contacted: '', q: ''
+  });
 
-  useEffect(() => {
+  const load = () => {
+    const params = {};
+    Object.entries(filters).forEach(([k, v]) => { if (v) params[k] = v; });
+    api.get('/finance/sponsorships', { params }).then(r => setData(r.data));
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const applyFilter = (key, value) => {
+    const next = { ...filters, [key]: value };
+    setFilters(next);
+    const params = {};
+    Object.entries(next).forEach(([k, v]) => { if (v) params[k] = v; });
+    api.get('/finance/sponsorships', { params }).then(r => setData(r.data));
+  };
+
+  const clearFilters = () => {
+    const empty = { sponsorship_type: '', payment_status: '', visit_status: '', student_obtained: '', student_contacted: '', q: '' };
+    setFilters(empty);
     api.get('/finance/sponsorships').then(r => setData(r.data));
-  }, []);
+  };
+
+  const hasFilters = Object.values(filters).some(v => v);
 
   return (
     <div>
@@ -255,22 +279,69 @@ function TabPatrocinios() {
       </div>
 
       <div className="card">
-        <h2>Detalle de Patrocinios</h2>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '.75rem', flexWrap: 'wrap', gap: '.5rem' }}>
+          <h2 style={{ margin: 0 }}>Detalle de Patrocinios</h2>
+          {hasFilters && <button className="btn small" onClick={clearFilters}>Limpiar filtros</button>}
+        </div>
+
+        <div className="filter-bar" style={{ marginBottom: '.75rem' }}>
+          <input
+            className="search-input" style={{ maxWidth: 220, marginBottom: 0 }}
+            placeholder="Buscar empresa, contacto..."
+            value={filters.q} onChange={e => applyFilter('q', e.target.value)}
+          />
+          <select value={filters.sponsorship_type} onChange={e => applyFilter('sponsorship_type', e.target.value)}>
+            <option value="">Tipo patrocinio</option>
+            <option value="Monetario">Monetario</option>
+            <option value="Especie">Especie</option>
+            <option value="Especie/Monetario">Especie/Monetario</option>
+          </select>
+          <select value={filters.payment_status} onChange={e => applyFilter('payment_status', e.target.value)}>
+            <option value="">Estado pago</option>
+            <option value="Pagado">Pagado</option>
+            <option value="Pendiente">Pendiente</option>
+            <option value="Abonado">Abonado</option>
+            <option value="Cancelado">Cancelado</option>
+          </select>
+          <select value={filters.visit_status} onChange={e => applyFilter('visit_status', e.target.value)}>
+            <option value="">Estado visita</option>
+            <option value="Visitado">Visitado</option>
+            <option value="En linea">En línea</option>
+            <option value="Visita pendiente">Visita pendiente</option>
+            <option value="Visita agendada">Visita agendada</option>
+            <option value="No quiso">No quiso</option>
+          </select>
+          <input
+            style={{ maxWidth: 180, padding: '.4rem .65rem', border: '1px solid var(--border)', borderRadius: 'var(--radius)', fontSize: '.8rem' }}
+            placeholder="Alumno obtenido"
+            value={filters.student_obtained} onChange={e => applyFilter('student_obtained', e.target.value)}
+          />
+          <input
+            style={{ maxWidth: 180, padding: '.4rem .65rem', border: '1px solid var(--border)', borderRadius: 'var(--radius)', fontSize: '.8rem' }}
+            placeholder="Alumno contactado"
+            value={filters.student_contacted} onChange={e => applyFilter('student_contacted', e.target.value)}
+          />
+        </div>
+
         {data.sponsorships.length === 0 ? (
-          <p className="empty-state">No hay patrocinios registrados</p>
+          <p className="empty-state">No hay patrocinios{hasFilters ? ' que coincidan con los filtros' : ' registrados'}</p>
         ) : (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Empresa</th><th>Contacto</th><th>Tipo</th><th>Paquete</th><th>Estado Pago</th><th>Detalle Pago</th></tr></thead>
+              <thead><tr><th>Folio</th><th>Fecha</th><th>Empresa</th><th>Contacto</th><th>Tipo</th><th>Paquete</th><th>Estado Pago</th><th>Visita</th><th>Alumno Obtenido</th><th>Alumno Contactado</th></tr></thead>
               <tbody>
                 {data.sponsorships.map(p => (
                   <tr key={p.id}>
+                    <td><strong>#{p.id}</strong></td>
+                    <td>{p.date ? new Date(p.date).toLocaleDateString('es-MX') : '—'}</td>
                     <td><strong>{p.company_name || '—'}</strong></td>
                     <td>{p.contact_person || '—'}</td>
                     <td><span className={`status-badge ${p.sponsorship_type?.toLowerCase().includes('especie') ? 'pending' : 'completed'}`}>{p.sponsorship_type || '—'}</span></td>
                     <td>{p.package || '—'}</td>
                     <td><span className={`status-badge ${p.payment_status?.toLowerCase()}`}>{p.payment_status || 'Pendiente'}</span></td>
-                    <td>{p.payment_detail || '—'}</td>
+                    <td>{p.visit_status || '—'}</td>
+                    <td>{p.student_obtained || '—'}</td>
+                    <td>{p.student_contacted || '—'}</td>
                   </tr>
                 ))}
               </tbody>
@@ -462,20 +533,35 @@ function TabSolicitudes() {
 // ═══════════════════════════════════════════════════════════════════════════
 function TabSalidas() {
   const [data, setData] = useState({ expenses: [], total: 0, byCommittee: [] });
-  const [budgets, setBudgets] = useState({ budgets: [], totalBudget: 0, totalSpent: 0, totalAvailable: 0 });
   const [showForm, setShowForm] = useState(false);
-  const [showBudgetForm, setShowBudgetForm] = useState(null);
   const [form, setForm] = useState({ date: '', committee: '', concept: '', amount: '', responsible: '', notes: '' });
-  const [budgetVal, setBudgetVal] = useState('');
   const [error, setError] = useState('');
   const [files, setFiles] = useState([]);
+  const [filters, setFilters] = useState({ committee: '', responsible: '', q: '', from: '', to: '' });
 
   const load = useCallback(() => {
-    api.get('/finance/expenses').then(r => setData(r.data));
-    api.get('/finance/budgets').then(r => setBudgets(r.data));
+    const params = {};
+    Object.entries(filters).forEach(([k, v]) => { if (v) params[k] = v; });
+    api.get('/finance/expenses', { params }).then(r => setData(r.data));
   }, []);
 
   useEffect(() => { load(); }, [load]);
+
+  const applyFilter = (key, value) => {
+    const next = { ...filters, [key]: value };
+    setFilters(next);
+    const params = {};
+    Object.entries(next).forEach(([k, v]) => { if (v) params[k] = v; });
+    api.get('/finance/expenses', { params }).then(r => setData(r.data));
+  };
+
+  const clearFilters = () => {
+    const empty = { committee: '', responsible: '', q: '', from: '', to: '' };
+    setFilters(empty);
+    api.get('/finance/expenses').then(r => setData(r.data));
+  };
+
+  const hasFilters = Object.values(filters).some(v => v);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -500,11 +586,6 @@ function TabSalidas() {
     load();
   };
 
-  const handleBudgetSave = async (committee) => {
-    await api.put(`/finance/budgets/${encodeURIComponent(committee)}`, { budget: parseFloat(budgetVal) || 0 });
-    setShowBudgetForm(null); setBudgetVal(''); load();
-  };
-
   return (
     <div>
       <div className="stats-grid">
@@ -512,18 +593,16 @@ function TabSalidas() {
           <span className="stat-num">{fmt(data.total)}</span>
           <span className="stat-label">Total Salidas</span>
         </div>
-        <div className="stat-card">
-          <span className="stat-num">{fmt(budgets.totalBudget)}</span>
-          <span className="stat-label">Presupuesto Total</span>
-        </div>
-        <div className="stat-card" style={{ borderLeftColor: budgets.totalAvailable < 0 ? 'var(--danger)' : 'var(--success)' }}>
-          <span className="stat-num" style={{ color: budgets.totalAvailable < 0 ? 'var(--danger)' : 'var(--success)' }}>{fmt(budgets.totalAvailable)}</span>
-          <span className="stat-label">Disponible</span>
-        </div>
+        {data.byCommittee.filter(c => c.committee).slice(0, 4).map(c => (
+          <div key={c.committee} className="stat-card">
+            <span className="stat-num">{fmt(c.total)}</span>
+            <span className="stat-label">{c.committee}</span>
+          </div>
+        ))}
       </div>
 
       <div className="page-header">
-        <h2>Salidas / Egresos</h2>
+        <h2>Registro de Salidas</h2>
         <button className="btn primary" onClick={() => setShowForm(!showForm)}>
           {showForm ? 'Cancelar' : '+ Nueva Salida'}
         </button>
@@ -554,54 +633,39 @@ function TabSalidas() {
         </div>
       )}
 
-      {/* Panel de presupuestos por comité */}
       <div className="card">
-        <h2>Presupuesto por Comité</h2>
-        <div className="table-wrap">
-          <table>
-            <thead><tr><th>Comité</th><th>Presupuesto</th><th>Gastado</th><th>Disponible</th><th>Estado</th><th>Acciones</th></tr></thead>
-            <tbody>
-              {(budgets.budgets || []).map(b => {
-                const available = b.budget - b.spent;
-                return (
-                  <tr key={b.committee}>
-                    <td><strong>{b.committee}</strong></td>
-                    <td>
-                      {showBudgetForm === b.committee ? (
-                        <div style={{ display: 'flex', gap: '.35rem' }}>
-                          <input type="number" step="0.01" min="0" value={budgetVal} onChange={e => setBudgetVal(e.target.value)} style={{ width: 100, padding: '.25rem', fontSize: '.8rem' }} />
-                          <button className="btn small primary" onClick={() => handleBudgetSave(b.committee)}>✓</button>
-                          <button className="btn small" onClick={() => { setShowBudgetForm(null); setBudgetVal(''); }}>✕</button>
-                        </div>
-                      ) : (
-                        <span onClick={() => { setShowBudgetForm(b.committee); setBudgetVal(b.budget); }} style={{ cursor: 'pointer', borderBottom: '1px dashed var(--text-light)' }}>
-                          {fmt(b.budget)}
-                        </span>
-                      )}
-                    </td>
-                    <td>{fmt(b.spent)}</td>
-                    <td style={{ color: available < 0 ? 'var(--danger)' : 'var(--success)' }}>{fmt(available)}</td>
-                    <td><span className={`status-badge ${b.status === 'OK' ? 'completed' : b.status === 'Alerta' ? 'pending' : 'rejected'}`}>{b.status}</span></td>
-                    <td>
-                      <div className="budget-bar" style={{ minWidth: 100 }}>
-                        <div className="budget-bar-track">
-                          <div className={`budget-bar-fill ${b.status === 'OK' ? 'ok' : b.status === 'Alerta' ? 'alert' : 'riesgo'}`} style={{ width: (b.budget > 0 ? Math.min(100, (b.spent / b.budget) * 100) : 0) + '%' }} />
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '.75rem', flexWrap: 'wrap', gap: '.5rem' }}>
+          <h2 style={{ margin: 0 }}>Registro de Salidas</h2>
+          {hasFilters && <button className="btn small" onClick={clearFilters}>Limpiar filtros</button>}
         </div>
-      </div>
 
-      {/* Lista de salidas */}
-      <div className="card">
-        <h2>Registro de Salidas</h2>
+        <div className="filter-bar" style={{ marginBottom: '.75rem' }}>
+          <input
+            className="search-input" style={{ maxWidth: 220, marginBottom: 0 }}
+            placeholder="Buscar concepto, notas..."
+            value={filters.q} onChange={e => applyFilter('q', e.target.value)}
+          />
+          <select value={filters.committee} onChange={e => applyFilter('committee', e.target.value)}>
+            <option value="">Comité / Área</option>
+            {COMMITTEES.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+          <input
+            style={{ maxWidth: 180, padding: '.4rem .65rem', border: '1px solid var(--border)', borderRadius: 'var(--radius)', fontSize: '.8rem' }}
+            placeholder="Responsable"
+            value={filters.responsible} onChange={e => applyFilter('responsible', e.target.value)}
+          />
+          <input
+            type="date" style={{ maxWidth: 160, padding: '.4rem .65rem', border: '1px solid var(--border)', borderRadius: 'var(--radius)', fontSize: '.8rem' }}
+            value={filters.from} onChange={e => applyFilter('from', e.target.value)}
+          />
+          <input
+            type="date" style={{ maxWidth: 160, padding: '.4rem .65rem', border: '1px solid var(--border)', borderRadius: 'var(--radius)', fontSize: '.8rem' }}
+            value={filters.to} onChange={e => applyFilter('to', e.target.value)}
+          />
+        </div>
+
         {data.expenses.length === 0 ? (
-          <p className="empty-state">No hay salidas registradas</p>
+          <p className="empty-state">No hay salidas{hasFilters ? ' que coincidan con los filtros' : ' registradas'}</p>
         ) : (
           <div className="table-wrap">
             <table>

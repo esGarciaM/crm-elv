@@ -1,9 +1,16 @@
 services:
   backend:
-    build: ./backend
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
     volumes:
       - backend_uploads:/app/uploads
       - backend_db:/app/data
+      - ./backend/server.js:/app/server.js
+      - ./backend/database.js:/app/database.js
+      - ./backend/middleware:/app/middleware
+      - ./backend/routes:/app/routes
+      - ./backend/migrations:/app/migrations
     environment:
       - PORT=3001
       - DB_PATH=/app/data/crm.db
@@ -14,15 +21,19 @@ services:
   frontend:
     build:
       context: ./frontend
-      args:
-        VITE_API_URL: /api
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ./frontend/src:/app/src
+      - ./frontend/index.html:/app/index.html
+      - ./frontend/public:/app/public
+      - ./frontend/vite.config.js:/app/vite.config.js
     ports:
-      - 80:80
+      - 5173:5173
     depends_on:
       - backend
     restart: unless-stopped
-    expose:
-      - 80
+    environment:
+      - VITE_API_URL=/api
 
 volumes:
   backend_uploads:
