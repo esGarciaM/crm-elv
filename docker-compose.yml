@@ -10,6 +10,11 @@ services:
     restart: unless-stopped
     expose:
       - 3001
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/api/stats', (r) => { process.exit(r.statusCode === 200 ? 0 : 1) }).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   frontend:
     build:
@@ -17,7 +22,8 @@ services:
       args:
         VITE_API_URL: /api
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     restart: unless-stopped
     expose:
       - 80
