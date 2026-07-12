@@ -394,4 +394,8 @@ if (!commentCols.includes('deleted')) {
   db.exec("ALTER TABLE patrocinio_comments ADD COLUMN file_name TEXT");
 }
 
+// ─── Finance module migrations ──
+import { runMigrations } from './migrations/runner.js';
+runMigrations(db);
+
 export default db;

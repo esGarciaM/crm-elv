@@ -13,6 +13,7 @@ import communicationRoutes from './routes/communications.js';
 import packageRoutes from './routes/packages.js';
 import patrocinioRoutes from './routes/patrocinios.js';
 import patrocinioSeguimientoRoutes from './routes/patrocinio-seguimiento.js';
+import financeRoutes from './routes/finance.js';
 import { authMiddleware } from './middleware/auth.js';
 import db from './database.js';
 import bcrypt from 'bcryptjs';
@@ -44,6 +45,7 @@ app.use('/api/communications', communicationRoutes);
 app.use('/api/packages', packageRoutes);
 app.use('/api/patrocinios', patrocinioRoutes);
 app.use('/api', patrocinioSeguimientoRoutes);
+app.use('/api/finance', financeRoutes);
 
 // Simple endpoint to list active users for assignment dropdowns
 app.get('/api/users', authMiddleware, (req, res) => {

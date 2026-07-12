@@ -1,227 +1,443 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import api from '../api';
 
-function fmtSize(bytes) {
-  if (bytes < 1024) return bytes + ' B';
-  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-  return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+const fmt = (n) => '$' + Number(n || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 });
+
+const COMMITTEES = [
+  'Finanzas', 'Comunicados', 'Diseño', 'Decoración', 'Redes',
+  'Patrocinio', 'Logística', 'Producción Audiovisual', 'Conferencistas', 'Otro'
+];
+
+const SOLICITUD_STATUS = { pendiente: 'Pendiente', aprobada: 'Aprobada', rechazada: 'Rechazada', pagada: 'Pagada' };
+const SOLICITUD_PRIORITY = { baja: 'Baja', media: 'Media', alta: 'Alta', urgente: 'Urgente' };
+
+function fmtSize(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b / 1024).toFixed(1) + ' KB';
+  return (b / 1048576).toFixed(1) + ' MB';
 }
 
-function iconFor(mime) {
-  if (mime.includes('pdf')) return '📄';
-  if (mime.includes('image')) return '🖼';
-  if (mime.includes('word') || mime.includes('document')) return '📝';
-  if (mime.includes('excel') || mime.includes('spreadsheet')) return '📊';
-  if (mime.includes('text')) return '📃';
-  return '📎';
-}
-
-const statusLabels = {
-  pending: 'Pendiente',
-  approved: 'Aprobado',
-  rejected: 'Rechazado',
-  paid: 'Pagado'
-};
-
-export default function Finance() {
-  const [expenses, setExpenses] = useState([]);
-  const [departments, setDepartments] = useState([]);
-  const [employees, setEmployees] = useState([]);
-  const [showForm, setShowForm] = useState(false);
-  const [deptFilter, setDeptFilter] = useState('');
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [expandedId, setExpandedId] = useState(null);
-
-  const [form, setForm] = useState({
-    responsible_name: '', concept: '', description: '', justification: '',
-    amount: '', required_date: '', impact_if_not_done: '', department_id: ''
-  });
-  const [files, setFiles] = useState([]);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState('');
-
-  const loadExpenses = () => {
-    const params = { page, limit: 20 };
-    if (deptFilter) params.department_id = deptFilter;
-    api.get('/expenses', { params }).then(r => {
-      setExpenses(r.data.expenses);
-      setTotalPages(r.data.totalPages);
-    });
-  };
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB: RESUMEN
+// ═══════════════════════════════════════════════════════════════════════════
+function TabResumen() {
+  const [data, setData] = useState(null);
+  const [budgets, setBudgets] = useState([]);
 
   useEffect(() => {
-    api.get('/departments').then(r => setDepartments(r.data));
-    api.get('/employees').then(r => setEmployees(r.data));
+    api.get('/finance/summary').then(r => setData(r.data));
+    api.get('/finance/budgets').then(r => setBudgets(r.data.budgets || []));
   }, []);
 
-  useEffect(() => { loadExpenses(); }, [page, deptFilter]);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!form.responsible_name.trim() || !form.concept.trim() || !form.amount) {
-      setError('Responsable, concepto y monto son requeridos');
-      return;
-    }
-    setSubmitting(true);
-    setError('');
-    try {
-      const fd = new FormData();
-      Object.entries(form).forEach(([k, v]) => { if (v) fd.append(k, v); });
-      for (let i = 0; i < files.length; i++) fd.append('files', files[i]);
-      await api.post('/expenses', fd);
-      setShowForm(false);
-      setForm({ responsible_name: '', concept: '', description: '', justification: '', amount: '', required_date: '', impact_if_not_done: '', department_id: '' });
-      setFiles([]);
-      setPage(1);
-      loadExpenses();
-    } catch (err) {
-      setError(err.response?.data?.error || 'Error al crear gasto');
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const updateStatus = async (id, status) => {
-    await api.put(`/expenses/${id}`, { status });
-    loadExpenses();
-  };
-
-  const deleteExpense = async (id) => {
-    if (!confirm('¿Eliminar este gasto?')) return;
-    await api.delete(`/expenses/${id}`);
-    loadExpenses();
-  };
-
-  const totalAmount = expenses.reduce((s, e) => {
-    const st = e.status;
-    if (st === 'approved' || st === 'paid' || st === 'pending') return s + e.amount;
-    return s;
-  }, 0);
+  if (!data) return <div className="loading">Cargando...</div>;
 
   return (
     <div>
-      <div className="page-header">
-        <h1>Finanzas</h1>
-        <div className="page-actions">
-          <button className="btn" onClick={() => setShowForm(!showForm)}>
-            {showForm ? 'Cancelar' : '+ Nuevo Gasto'}
-          </button>
+      <div className="finance-summary-grid">
+        <div className="finance-summary-card income">
+          <div className="label">Total Aportaciones</div>
+          <div className="value" style={{ color: 'var(--success)' }}>{fmt(data.totalContributions)}</div>
+        </div>
+        <div className="finance-summary-card expense">
+          <div className="label">Total Salidas</div>
+          <div className="value" style={{ color: 'var(--danger)' }}>{fmt(data.totalExpenses)}</div>
+        </div>
+        <div className="finance-summary-card balance">
+          <div className="label">Balance Final</div>
+          <div className="value" style={{ color: data.balanceFinal >= 0 ? 'var(--info)' : 'var(--danger)' }}>{fmt(data.balanceFinal)}</div>
         </div>
       </div>
 
-      {expenses.length > 0 && (
-        <div className="stats-grid" style={{ marginBottom: '1rem' }}>
-          <div className="stat-card info">
-            <span className="stat-num">${totalAmount.toLocaleString()}</span>
-            <span className="stat-label">Total en Gastos</span>
-          </div>
-          <div className="stat-card">
-            <span className="stat-num">{expenses.length}</span>
-            <span className="stat-label">Gastos Registrados</span>
+      <div className="stats-grid">
+        <div className="stat-card warning">
+          <span className="stat-num">{data.solicitudes?.pendingCount || 0}</span>
+          <span className="stat-label">Solicitudes Pendientes</span>
+          <span className="stat-sub">{fmt(data.solicitudes?.pendingTotal)}</span>
+        </div>
+        <div className="stat-card success">
+          <span className="stat-num">{data.solicitudes?.approvedCount || 0}</span>
+          <span className="stat-label">Solicitudes Aprobadas</span>
+          <span className="stat-sub">{fmt(data.solicitudes?.approvedTotal)}</span>
+        </div>
+        <div className="stat-card info">
+          <span className="stat-num">{data.solicitudes?.paidCount || 0}</span>
+          <span className="stat-label">Solicitudes Pagadas</span>
+          <span className="stat-sub">{fmt(data.solicitudes?.paidTotal)}</span>
+        </div>
+      </div>
+
+      {budgets.length > 0 && (
+        <div className="card">
+          <h2>Presupuestos por Comité</h2>
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Comité</th><th>Presupuesto</th><th>Gastado</th><th>Disponible</th><th>Estado</th><th>Uso</th></tr>
+              </thead>
+              <tbody>
+                {budgets.map(b => {
+                  const available = b.budget - b.spent;
+                  const pct = b.budget > 0 ? Math.min(100, (b.spent / b.budget) * 100) : 0;
+                  const fillClass = b.status === 'OK' ? 'ok' : b.status === 'Alerta' ? 'alert' : 'riesgo';
+                  return (
+                    <tr key={b.committee}>
+                      <td><strong>{b.committee}</strong></td>
+                      <td>{fmt(b.budget)}</td>
+                      <td>{fmt(b.spent)}</td>
+                      <td style={{ color: available < 0 ? 'var(--danger)' : 'var(--success)' }}>{fmt(available)}</td>
+                      <td><span className={`status-badge ${b.status === 'OK' ? 'completed' : b.status === 'Alerta' ? 'pending' : 'rejected'}`}>{b.status}</span></td>
+                      <td style={{ minWidth: 120 }}>
+                        <div className="budget-bar">
+                          <div className="budget-bar-track">
+                            <div className={`budget-bar-fill ${fillClass}`} style={{ width: pct + '%' }} />
+                          </div>
+                          <span style={{ fontSize: '.75rem', color: 'var(--text-light)' }}>{Math.round(pct)}%</span>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB: APORTACIONES
+// ═══════════════════════════════════════════════════════════════════════════
+function TabAportaciones() {
+  const [data, setData] = useState({ contributions: [], total: 0, bySalon: [] });
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ date: '', salon: '', amount: '', description: '' });
+  const [error, setError] = useState('');
+  const [editId, setEditId] = useState(null);
+
+  const load = useCallback(() => {
+    api.get('/finance/contributions').then(r => setData(r.data));
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.date || !form.salon || !form.amount) { setError('Fecha, salón y monto son requeridos'); return; }
+    setError('');
+    try {
+      if (editId) {
+        await api.put(`/finance/contributions/${editId}`, form);
+      } else {
+        await api.post('/finance/contributions', form);
+      }
+      setShowForm(false); setEditId(null);
+      setForm({ date: '', salon: '', amount: '', description: '' });
+      load();
+    } catch (err) { setError(err.response?.data?.error || 'Error'); }
+  };
+
+  const handleEdit = (c) => {
+    setForm({ date: c.date, salon: c.salon, amount: c.amount, description: c.description || '' });
+    setEditId(c.id); setShowForm(true);
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm('¿Eliminar esta aportación?')) return;
+    await api.delete(`/finance/contributions/${id}`);
+    load();
+  };
+
+  const bySalonMap = {};
+  (data.bySalon || []).forEach(s => { bySalonMap[s.salon] = s.total; });
+
+  return (
+    <div>
+      <div className="stats-grid">
+        {['A', 'B', 'C', 'D'].map(s => (
+          <div key={s} className="stat-card">
+            <span className="stat-num">{fmt(bySalonMap[s] || 0)}</span>
+            <span className="stat-label">Salón {s}</span>
+          </div>
+        ))}
+        <div className="stat-card info">
+          <span className="stat-num">{fmt(data.total)}</span>
+          <span className="stat-label">TOTAL</span>
+        </div>
+      </div>
+
+      <div className="page-header">
+        <h2>Aportaciones por Salón</h2>
+        <button className="btn primary" onClick={() => { setShowForm(!showForm); setEditId(null); setForm({ date: '', salon: '', amount: '', description: '' }); }}>
+          {showForm ? 'Cancelar' : '+ Nueva Aportación'}
+        </button>
+      </div>
 
       {showForm && (
         <div className="card">
-          <h2>Registrar Gasto</h2>
+          <h2>{editId ? 'Editar Aportación' : 'Registrar Aportación'}</h2>
           {error && <div className="error-msg">{error}</div>}
           <form onSubmit={handleSubmit}>
             <div className="form-grid">
-              <select value={form.responsible_name} onChange={e => setForm({ ...form, responsible_name: e.target.value })} required>
-                <option value="">— Seleccionar responsable —</option>
-                {employees.filter(e => e.active).map(emp => (
-                  <option key={emp.id} value={`${emp.first_name} ${emp.last_name}`}>{emp.first_name} {emp.last_name}</option>
-                ))}
+              <input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} required />
+              <select value={form.salon} onChange={e => setForm({ ...form, salon: e.target.value })} required>
+                <option value="">— Seleccionar Salón —</option>
+                <option value="A">Salón A</option>
+                <option value="B">Salón B</option>
+                <option value="C">Salón C</option>
+                <option value="D">Salón D</option>
               </select>
-              <input placeholder="Concepto del gasto *" value={form.concept} onChange={e => setForm({ ...form, concept: e.target.value })} required />
-              <textarea className="full-width" placeholder="Descripción / Justificación" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
-              <input type="number" step="0.01" min="0" placeholder="Monto solicitado *" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} required />
-              <input type="date" placeholder="Fecha requerida" value={form.required_date} onChange={e => setForm({ ...form, required_date: e.target.value })} />
-              <textarea className="full-width" placeholder="¿Qué pasaría si este gasto no se realiza?" value={form.impact_if_not_done} onChange={e => setForm({ ...form, impact_if_not_done: e.target.value })} />
-              <select value={form.department_id} onChange={e => setForm({ ...form, department_id: e.target.value })}>
-                <option value="">— Departamento —</option>
-                {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
-              </select>
-              <div className="full-width">
-                <label style={{ fontSize: '.85rem', color: 'var(--text-light)', display: 'block', marginBottom: '.3rem' }}>
-                  Archivos (hasta 5, máx 10 MB c/u): PDF, Documento, Imagen, Hoja de cálculo
-                </label>
-                <input
-                  type="file" multiple accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.webp,.csv,.txt"
-                  onChange={e => setFiles(Array.from(e.target.files).slice(0, 5))}
-                />
-                {files.length > 0 && (
-                  <div style={{ marginTop: '.5rem', fontSize: '.8rem', color: 'var(--text-light)' }}>
-                    {files.map((f, i) => <div key={i}>{f.name} ({fmtSize(f.size)})</div>)}
-                  </div>
-                )}
-              </div>
+              <input type="number" step="0.01" min="0" placeholder="Monto *" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} required />
+              <input placeholder="Descripción" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
             </div>
-            <button className="btn primary" type="submit" disabled={submitting}>
-              {submitting ? 'Guardando...' : 'Registrar Gasto'}
-            </button>
+            <button className="btn primary" type="submit">{editId ? 'Actualizar' : 'Registrar'}</button>
           </form>
         </div>
       )}
 
       <div className="card">
-        {expenses.length === 0 ? (
-          <p className="empty-state">No hay gastos registrados</p>
+        {data.contributions.length === 0 ? (
+          <p className="empty-state">No hay aportaciones registradas</p>
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Fecha</th><th>Salón</th><th>Monto</th><th>Descripción</th><th>Acciones</th></tr></thead>
+              <tbody>
+                {data.contributions.map(c => (
+                  <tr key={c.id}>
+                    <td>{c.date}</td>
+                    <td><span className="status-badge info">Salón {c.salon}</span></td>
+                    <td><strong>{fmt(c.amount)}</strong></td>
+                    <td>{c.description || '—'}</td>
+                    <td>
+                      <div className="actions-cell">
+                        <button className="icon-btn edit" onClick={() => handleEdit(c)} title="Editar">✏</button>
+                        <button className="icon-btn danger" onClick={() => handleDelete(c.id)} title="Eliminar">🗑</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB: PATROCINIOS (vista financiera)
+// ═══════════════════════════════════════════════════════════════════════════
+function TabPatrocinios() {
+  const [data, setData] = useState({ sponsorships: [], totalCash: 0, totalKind: 0, totalGeneral: 0 });
+
+  useEffect(() => {
+    api.get('/finance/sponsorships').then(r => setData(r.data));
+  }, []);
+
+  return (
+    <div>
+      <div className="stats-grid">
+        <div className="stat-card success">
+          <span className="stat-num">{fmt(data.totalCash)}</span>
+          <span className="stat-label">Total en Efectivo</span>
+        </div>
+        <div className="stat-card warning">
+          <span className="stat-num">{fmt(data.totalKind)}</span>
+          <span className="stat-label">Total en Especie</span>
+        </div>
+        <div className="stat-card info">
+          <span className="stat-num">{fmt(data.totalGeneral)}</span>
+          <span className="stat-label">Total General</span>
+        </div>
+      </div>
+
+      <div className="card">
+        <h2>Detalle de Patrocinios</h2>
+        {data.sponsorships.length === 0 ? (
+          <p className="empty-state">No hay patrocinios registrados</p>
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Empresa</th><th>Contacto</th><th>Tipo</th><th>Paquete</th><th>Estado Pago</th><th>Detalle Pago</th></tr></thead>
+              <tbody>
+                {data.sponsorships.map(p => (
+                  <tr key={p.id}>
+                    <td><strong>{p.company_name || '—'}</strong></td>
+                    <td>{p.contact_person || '—'}</td>
+                    <td><span className={`status-badge ${p.sponsorship_type?.toLowerCase().includes('especie') ? 'pending' : 'completed'}`}>{p.sponsorship_type || '—'}</span></td>
+                    <td>{p.package || '—'}</td>
+                    <td><span className={`status-badge ${p.payment_status?.toLowerCase()}`}>{p.payment_status || 'Pendiente'}</span></td>
+                    <td>{p.payment_detail || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB: SOLICITUDES
+// ═══════════════════════════════════════════════════════════════════════════
+function TabSolicitudes() {
+  const [data, setData] = useState({ solicitudes: [], total: 0, byStatus: [], totalPages: 1 });
+  const [page, setPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [employees, setEmployees] = useState([]);
+  const [form, setForm] = useState({
+    date: '', committee: '', responsible: '', concept: '', justification: '',
+    amount_requested: '', priority: 'media', impact_if_not_done: '', email: ''
+  });
+  const [files, setFiles] = useState([]);
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [expandedId, setExpandedId] = useState(null);
+
+  const load = useCallback(() => {
+    const params = { page, limit: 20 };
+    if (statusFilter) params.status = statusFilter;
+    api.get('/finance/solicitudes', { params }).then(r => setData(r.data));
+  }, [page, statusFilter]);
+
+  useEffect(() => { load(); }, [load]);
+  useEffect(() => { api.get('/employees').then(r => setEmployees(r.data)); }, []);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.date || !form.committee || !form.responsible || !form.concept || !form.amount_requested) {
+      setError('Todos los campos marcados con * son requeridos');
+      return;
+    }
+    setSubmitting(true); setError('');
+    try {
+      const fd = new FormData();
+      Object.entries(form).forEach(([k, v]) => { if (v) fd.append(k, v); });
+      for (const f of files) fd.append('files', f);
+      await api.post('/finance/solicitudes', fd);
+      setShowForm(false);
+      setForm({ date: '', committee: '', responsible: '', concept: '', justification: '', amount_requested: '', priority: 'media', impact_if_not_done: '', email: '' });
+      setFiles([]); setPage(1); load();
+    } catch (err) { setError(err.response?.data?.error || 'Error al crear solicitud'); }
+    finally { setSubmitting(false); }
+  };
+
+  const updateStatus = async (id, status) => {
+    await api.put(`/finance/solicitudes/${id}`, { status });
+    load();
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm('¿Eliminar esta solicitud?')) return;
+    await api.delete(`/finance/solicitudes/${id}`);
+    load();
+  };
+
+  const statusCounts = {};
+  (data.byStatus || []).forEach(s => { statusCounts[s.status] = s.count; });
+
+  return (
+    <div>
+      <div className="filter-bar">
+        <button className={`filter-btn ${!statusFilter ? 'active' : ''}`} onClick={() => { setStatusFilter(''); setPage(1); }}>Todas ({data.total})</button>
+        {Object.entries(SOLICITUD_STATUS).map(([k, v]) => (
+          <button key={k} className={`filter-btn ${statusFilter === k ? 'active' : ''}`} onClick={() => { setStatusFilter(k); setPage(1); }}>
+            {v} ({statusCounts[k] || 0})
+          </button>
+        ))}
+      </div>
+
+      <div className="page-header">
+        <h2>Solicitudes de Gasto</h2>
+        <button className="btn primary" onClick={() => setShowForm(!showForm)}>
+          {showForm ? 'Cancelar' : '+ Nueva Solicitud'}
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="card">
+          <h2>Registrar Solicitud</h2>
+          {error && <div className="error-msg">{error}</div>}
+          <form onSubmit={handleSubmit}>
+            <div className="form-grid">
+              <input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} required />
+              <select value={form.committee} onChange={e => setForm({ ...form, committee: e.target.value })} required>
+                <option value="">— Comité Solicitante *</option>
+                {COMMITTEES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <select value={form.responsible} onChange={e => setForm({ ...form, responsible: e.target.value })} required>
+                <option value="">— Responsable *</option>
+                {employees.filter(e => e.active).map(emp => (
+                  <option key={emp.id} value={`${emp.first_name} ${emp.last_name}`}>{emp.first_name} {emp.last_name}</option>
+                ))}
+              </select>
+              <input placeholder="Concepto del gasto *" value={form.concept} onChange={e => setForm({ ...form, concept: e.target.value })} required />
+              <textarea className="full-width" placeholder="Descripción / Justificación" value={form.justification} onChange={e => setForm({ ...form, justification: e.target.value })} />
+              <input type="number" step="0.01" min="0" placeholder="Monto solicitado *" value={form.amount_requested} onChange={e => setForm({ ...form, amount_requested: e.target.value })} required />
+              <select value={form.priority} onChange={e => setForm({ ...form, priority: e.target.value })}>
+                {Object.entries(SOLICITUD_PRIORITY).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+              <textarea className="full-width" placeholder="¿Qué pasaría si este gasto no se realiza?" value={form.impact_if_not_done} onChange={e => setForm({ ...form, impact_if_not_done: e.target.value })} />
+              <input type="email" placeholder="Correo electrónico" value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} />
+              <div className="full-width">
+                <label style={{ fontSize: '.85rem', color: 'var(--text-light)', display: 'block', marginBottom: '.3rem' }}>Cotización / Archivos adjuntos</label>
+                <input type="file" multiple onChange={e => setFiles(Array.from(e.target.files).slice(0, 5))} />
+              </div>
+            </div>
+            <button className="btn primary" type="submit" disabled={submitting}>{submitting ? 'Guardando...' : 'Registrar Solicitud'}</button>
+          </form>
+        </div>
+      )}
+
+      <div className="card">
+        {data.solicitudes.length === 0 ? (
+          <p className="empty-state">No hay solicitudes registradas</p>
         ) : (
           <div className="task-list">
-            {expenses.map(e => (
-              <div key={e.id} className="task-card" style={{ borderLeftColor: e.status === 'approved' ? 'var(--success)' : e.status === 'rejected' ? 'var(--danger)' : e.status === 'paid' ? 'var(--info)' : 'var(--warning)' }}>
+            {data.solicitudes.map(s => (
+              <div key={s.id} className="task-card" style={{ borderLeftColor: s.status === 'aprobada' ? 'var(--success)' : s.status === 'rechazada' ? 'var(--danger)' : s.status === 'pagada' ? 'var(--info)' : 'var(--warning)' }}>
                 <div className="task-header">
                   <div>
-                    <h3>{e.concept}</h3>
+                    <h3>{s.concept}</h3>
                     <div className="task-meta">
-                      <span>Responsable: {e.responsible_name}</span>
-                      {e.department_name && <span>Depto: {e.department_name}</span>}
-                      <span>Monto: ${Number(e.amount).toLocaleString()}</span>
-                      {e.required_date && <span>Requiere: {e.required_date}</span>}
+                      <span>ID: {s.id}</span>
+                      <span>{s.date}</span>
+                      <span>Comité: {s.committee}</span>
+                      <span>Responsable: {s.responsible}</span>
+                      <span>Monto: {fmt(s.amount_requested)}</span>
+                      <span className={`status-badge ${s.priority}`}>{SOLICITUD_PRIORITY[s.priority]}</span>
                     </div>
                   </div>
                   <div className="task-actions">
-                    <span className={`status-badge ${e.status}`}>{statusLabels[e.status] || e.status}</span>
-                    <select className="status-select" value={e.status} onChange={ev => updateStatus(e.id, ev.target.value)}>
-                      <option value="pending">Pendiente</option>
-                      <option value="approved">Aprobado</option>
-                      <option value="rejected">Rechazado</option>
-                      <option value="paid">Pagado</option>
+                    <span className={`status-badge ${s.status}`}>{SOLICITUD_STATUS[s.status]}</span>
+                    <select className="status-select" value={s.status} onChange={e => updateStatus(s.id, e.target.value)}>
+                      <option value="pendiente">Pendiente</option>
+                      <option value="aprobada">Aprobada</option>
+                      <option value="rechazada">Rechazada</option>
+                      <option value="pagada">Pagada</option>
                     </select>
-                    <button className="btn small" onClick={() => setExpandedId(expandedId === e.id ? null : e.id)}>
-                      {expandedId === e.id ? '▲' : '▼'} Detalle
+                    <button className="btn small" onClick={() => setExpandedId(expandedId === s.id ? null : s.id)}>
+                      {expandedId === s.id ? '▲' : '▼'} Detalle
                     </button>
-                    <button className="btn small danger" onClick={() => deleteExpense(e.id)}>🗑</button>
+                    <button className="btn small danger" onClick={() => handleDelete(s.id)}>🗑</button>
                   </div>
                 </div>
 
-                {expandedId === e.id && (
+                {expandedId === s.id && (
                   <div style={{ marginTop: '.75rem', paddingTop: '.75rem', borderTop: '1px solid var(--border)' }}>
-                    {e.description && <p style={{ fontSize: '.85rem', marginBottom: '.5rem' }}><strong>Descripción:</strong> {e.description}</p>}
-                    {e.justification && <p style={{ fontSize: '.85rem', marginBottom: '.5rem' }}><strong>Justificación:</strong> {e.justification}</p>}
-                    {e.impact_if_not_done && <p style={{ fontSize: '.85rem', marginBottom: '.5rem' }}><strong>Impacto si no se realiza:</strong> {e.impact_if_not_done}</p>}
-                    {e.quote_date && <p style={{ fontSize: '.85rem', marginBottom: '.5rem' }}><strong>Fecha cotización:</strong> {e.quote_date}</p>}
-                    {e.created_by_name && <p style={{ fontSize: '.85rem', marginBottom: '.5rem' }}><strong>Creado por:</strong> {e.created_by_name}</p>}
-
-                    {e.files && e.files.length > 0 && (
-                      <div style={{ marginTop: '.5rem' }}>
-                        <strong style={{ fontSize: '.85rem' }}>Archivos:</strong>
-                        <div className="docs-list" style={{ marginTop: '.35rem' }}>
-                          {e.files.map(f => (
-                            <div key={f.id} className="doc-item">
-                              <span className="doc-icon">{iconFor(f.mime_type)}</span>
-                              <div className="doc-info">
-                                <a href={`/api/expenses/download/${f.id}?token=${localStorage.getItem('token')}`} target="_blank" rel="noopener noreferrer" className="doc-name">{f.original_name}</a>
-                                <span className="doc-meta">{fmtSize(f.size)}</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
+                    {s.justification && <p style={{ fontSize: '.85rem', marginBottom: '.5rem' }}><strong>Justificación:</strong> {s.justification}</p>}
+                    {s.impact_if_not_done && <p style={{ fontSize: '.85rem', marginBottom: '.5rem' }}><strong>Impacto:</strong> {s.impact_if_not_done}</p>}
+                    {s.reviewed_by_name && <p style={{ fontSize: '.85rem', marginBottom: '.5rem' }}><strong>Revisó:</strong> {s.reviewed_by_name}</p>}
+                    {s.approved_by_name && <p style={{ fontSize: '.85rem', marginBottom: '.5rem' }}><strong>Aprobó:</strong> {s.approved_by_name}</p>}
+                    {s.payment_date && <p style={{ fontSize: '.85rem', marginBottom: '.5rem' }}><strong>Fecha Pago:</strong> {s.payment_date}</p>}
+                    {s.observations && <p style={{ fontSize: '.85rem', marginBottom: '.5rem' }}><strong>Observaciones:</strong> {s.observations}</p>}
+                    {s.created_by_name && <p style={{ fontSize: '.85rem' }}><strong>Creado por:</strong> {s.created_by_name}</p>}
                   </div>
                 )}
               </div>
@@ -229,14 +445,359 @@ export default function Finance() {
           </div>
         )}
 
-        {totalPages > 1 && (
+        {data.totalPages > 1 && (
           <div className="pagination">
             <button disabled={page <= 1} onClick={() => setPage(p => p - 1)}>Anterior</button>
-            <span>Página {page} de {totalPages}</span>
-            <button disabled={page >= totalPages} onClick={() => setPage(p => p + 1)}>Siguiente</button>
+            <span>Página {page} de {data.totalPages}</span>
+            <button disabled={page >= data.totalPages} onClick={() => setPage(p => p + 1)}>Siguiente</button>
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB: SALIDAS
+// ═══════════════════════════════════════════════════════════════════════════
+function TabSalidas() {
+  const [data, setData] = useState({ expenses: [], total: 0, byCommittee: [] });
+  const [budgets, setBudgets] = useState({ budgets: [], totalBudget: 0, totalSpent: 0, totalAvailable: 0 });
+  const [showForm, setShowForm] = useState(false);
+  const [showBudgetForm, setShowBudgetForm] = useState(null);
+  const [form, setForm] = useState({ date: '', committee: '', concept: '', amount: '', responsible: '', notes: '' });
+  const [budgetVal, setBudgetVal] = useState('');
+  const [error, setError] = useState('');
+  const [files, setFiles] = useState([]);
+
+  const load = useCallback(() => {
+    api.get('/finance/expenses').then(r => setData(r.data));
+    api.get('/finance/budgets').then(r => setBudgets(r.data));
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!form.date || !form.concept || !form.responsible || !form.amount) {
+      setError('Fecha, concepto, responsable y monto son requeridos'); return;
+    }
+    setError('');
+    try {
+      const fd = new FormData();
+      Object.entries(form).forEach(([k, v]) => { if (v) fd.append(k, v); });
+      for (const f of files) fd.append('files', f);
+      await api.post('/finance/expenses', fd);
+      setShowForm(false);
+      setForm({ date: '', committee: '', concept: '', amount: '', responsible: '', notes: '' });
+      setFiles([]); load();
+    } catch (err) { setError(err.response?.data?.error || 'Error'); }
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm('¿Eliminar esta salida?')) return;
+    await api.delete(`/finance/expenses/${id}`);
+    load();
+  };
+
+  const handleBudgetSave = async (committee) => {
+    await api.put(`/finance/budgets/${encodeURIComponent(committee)}`, { budget: parseFloat(budgetVal) || 0 });
+    setShowBudgetForm(null); setBudgetVal(''); load();
+  };
+
+  return (
+    <div>
+      <div className="stats-grid">
+        <div className="stat-card expense">
+          <span className="stat-num">{fmt(data.total)}</span>
+          <span className="stat-label">Total Salidas</span>
+        </div>
+        <div className="stat-card">
+          <span className="stat-num">{fmt(budgets.totalBudget)}</span>
+          <span className="stat-label">Presupuesto Total</span>
+        </div>
+        <div className="stat-card" style={{ borderLeftColor: budgets.totalAvailable < 0 ? 'var(--danger)' : 'var(--success)' }}>
+          <span className="stat-num" style={{ color: budgets.totalAvailable < 0 ? 'var(--danger)' : 'var(--success)' }}>{fmt(budgets.totalAvailable)}</span>
+          <span className="stat-label">Disponible</span>
+        </div>
+      </div>
+
+      <div className="page-header">
+        <h2>Salidas / Egresos</h2>
+        <button className="btn primary" onClick={() => setShowForm(!showForm)}>
+          {showForm ? 'Cancelar' : '+ Nueva Salida'}
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="card">
+          <h2>Registrar Salida</h2>
+          {error && <div className="error-msg">{error}</div>}
+          <form onSubmit={handleSubmit}>
+            <div className="form-grid">
+              <input type="date" value={form.date} onChange={e => setForm({ ...form, date: e.target.value })} required />
+              <select value={form.committee} onChange={e => setForm({ ...form, committee: e.target.value })}>
+                <option value="">— Comité / Área —</option>
+                {COMMITTEES.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <input placeholder="Concepto *" value={form.concept} onChange={e => setForm({ ...form, concept: e.target.value })} required />
+              <input type="number" step="0.01" min="0" placeholder="Monto *" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} required />
+              <input placeholder="Responsable *" value={form.responsible} onChange={e => setForm({ ...form, responsible: e.target.value })} required />
+              <input placeholder="Notas" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />
+              <div className="full-width">
+                <label style={{ fontSize: '.85rem', color: 'var(--text-light)', display: 'block', marginBottom: '.3rem' }}>Comprobantes</label>
+                <input type="file" multiple onChange={e => setFiles(Array.from(e.target.files).slice(0, 5))} />
+              </div>
+            </div>
+            <button className="btn primary" type="submit">Registrar Salida</button>
+          </form>
+        </div>
+      )}
+
+      {/* Panel de presupuestos por comité */}
+      <div className="card">
+        <h2>Presupuesto por Comité</h2>
+        <div className="table-wrap">
+          <table>
+            <thead><tr><th>Comité</th><th>Presupuesto</th><th>Gastado</th><th>Disponible</th><th>Estado</th><th>Acciones</th></tr></thead>
+            <tbody>
+              {(budgets.budgets || []).map(b => {
+                const available = b.budget - b.spent;
+                return (
+                  <tr key={b.committee}>
+                    <td><strong>{b.committee}</strong></td>
+                    <td>
+                      {showBudgetForm === b.committee ? (
+                        <div style={{ display: 'flex', gap: '.35rem' }}>
+                          <input type="number" step="0.01" min="0" value={budgetVal} onChange={e => setBudgetVal(e.target.value)} style={{ width: 100, padding: '.25rem', fontSize: '.8rem' }} />
+                          <button className="btn small primary" onClick={() => handleBudgetSave(b.committee)}>✓</button>
+                          <button className="btn small" onClick={() => { setShowBudgetForm(null); setBudgetVal(''); }}>✕</button>
+                        </div>
+                      ) : (
+                        <span onClick={() => { setShowBudgetForm(b.committee); setBudgetVal(b.budget); }} style={{ cursor: 'pointer', borderBottom: '1px dashed var(--text-light)' }}>
+                          {fmt(b.budget)}
+                        </span>
+                      )}
+                    </td>
+                    <td>{fmt(b.spent)}</td>
+                    <td style={{ color: available < 0 ? 'var(--danger)' : 'var(--success)' }}>{fmt(available)}</td>
+                    <td><span className={`status-badge ${b.status === 'OK' ? 'completed' : b.status === 'Alerta' ? 'pending' : 'rejected'}`}>{b.status}</span></td>
+                    <td>
+                      <div className="budget-bar" style={{ minWidth: 100 }}>
+                        <div className="budget-bar-track">
+                          <div className={`budget-bar-fill ${b.status === 'OK' ? 'ok' : b.status === 'Alerta' ? 'alert' : 'riesgo'}`} style={{ width: (b.budget > 0 ? Math.min(100, (b.spent / b.budget) * 100) : 0) + '%' }} />
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Lista de salidas */}
+      <div className="card">
+        <h2>Registro de Salidas</h2>
+        {data.expenses.length === 0 ? (
+          <p className="empty-state">No hay salidas registradas</p>
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>ID</th><th>Fecha</th><th>Comité</th><th>Concepto</th><th>Monto</th><th>Responsable</th><th>Notas</th><th>Acciones</th></tr></thead>
+              <tbody>
+                {data.expenses.map(e => (
+                  <tr key={e.id}>
+                    <td>{e.id}</td>
+                    <td>{e.date}</td>
+                    <td>{e.committee || '—'}</td>
+                    <td><strong>{e.concept}</strong></td>
+                    <td>{fmt(e.amount)}</td>
+                    <td>{e.responsible}</td>
+                    <td>{e.notes || '—'}</td>
+                    <td>
+                      <button className="icon-btn danger" onClick={() => handleDelete(e.id)} title="Eliminar">🗑</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TAB: REPORTES MENSUALES
+// ═══════════════════════════════════════════════════════════════════════════
+function TabReportes() {
+  const [reports, setReports] = useState([]);
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ month: new Date().getMonth() + 1, year: new Date().getFullYear() });
+  const [reportData, setReportData] = useState(null);
+  const [writtenReport, setWrittenReport] = useState('');
+  const [error, setError] = useState('');
+
+  const load = useCallback(() => {
+    api.get('/finance/monthly-reports').then(r => setReports(r.data));
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const generatePreview = async () => {
+    try {
+      const r = await api.post('/finance/monthly-reports/generate', { month: parseInt(form.month), year: parseInt(form.year) });
+      setReportData(r.data);
+      setWrittenReport(r.data.written_report || '');
+    } catch (err) { setError(err.response?.data?.error || 'Error al generar'); }
+  };
+
+  const saveReport = async () => {
+    if (!reportData) return;
+    try {
+      await api.post('/finance/monthly-reports', {
+        ...reportData, written_report: writtenReport
+      });
+      setShowForm(false); setReportData(null); load();
+    } catch (err) { setError(err.response?.data?.error || 'Error al guardar'); }
+  };
+
+  const deleteReport = async (id) => {
+    if (!confirm('¿Eliminar este reporte?')) return;
+    await api.delete(`/finance/monthly-reports/${id}`);
+    load();
+  };
+
+  const MONTHS = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+  return (
+    <div>
+      <div className="page-header">
+        <h2>Reportes Mensuales</h2>
+        <button className="btn primary" onClick={() => { setShowForm(!showForm); setReportData(null); setError(''); }}>
+          {showForm ? 'Cancelar' : '+ Generar Reporte'}
+        </button>
+      </div>
+
+      {showForm && (
+        <div className="card">
+          <h2>Generar Reporte Mensual</h2>
+          {error && <div className="error-msg">{error}</div>}
+          <div className="form-grid">
+            <select value={form.month} onChange={e => setForm({ ...form, month: e.target.value })}>
+              {MONTHS.map((m, i) => <option key={i + 1} value={i + 1}>{m}</option>)}
+            </select>
+            <input type="number" value={form.year} onChange={e => setForm({ ...form, year: e.target.value })} min="2020" max="2030" />
+          </div>
+          <button className="btn" onClick={generatePreview}>Generar Vista Previa</button>
+
+          {reportData && (
+            <div style={{ marginTop: '1rem' }}>
+              <div className="finance-summary-grid">
+                <div className="finance-summary-card">
+                  <div className="label">Saldo Inicial</div>
+                  <div className="value">{fmt(reportData.initial_balance)}</div>
+                </div>
+                <div className="finance-summary-card income">
+                  <div className="label">Aportaciones</div>
+                  <div className="value">{fmt(reportData.contributions_total)}</div>
+                </div>
+                <div className="finance-summary-card expense">
+                  <div className="label">Salidas</div>
+                  <div className="value">{fmt(reportData.expenses_total)}</div>
+                </div>
+                <div className="finance-summary-card balance">
+                  <div className="label">Saldo Final</div>
+                  <div className="value">{fmt(reportData.final_balance)}</div>
+                </div>
+              </div>
+
+              <div className="field" style={{ marginTop: '1rem' }}>
+                <label>Reporte Escrito del Mes</label>
+                <textarea
+                  rows={6}
+                  value={writtenReport}
+                  onChange={e => setWrittenReport(e.target.value)}
+                  placeholder="Descripción narrativa del periodo financiero..."
+                  style={{ width: '100%', padding: '.75rem', border: '1px solid var(--border)', borderRadius: 'var(--radius)', fontSize: '.9rem', resize: 'vertical' }}
+                />
+              </div>
+
+              <button className="btn primary" onClick={saveReport} style={{ marginTop: '.75rem' }}>Guardar Reporte</button>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="card">
+        {reports.length === 0 ? (
+          <p className="empty-state">No hay reportes mensuales generados</p>
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <thead><tr><th>Periodo</th><th>Saldo Inicial</th><th>Aportaciones</th><th>Patrocinios Efectivo</th><th>Patrocinios Especie</th><th>Salidas</th><th>Saldo Final</th><th>Acciones</th></tr></thead>
+              <tbody>
+                {reports.map(r => (
+                  <tr key={r.id}>
+                    <td><strong>{MONTHS[r.month - 1]} {r.year}</strong></td>
+                    <td>{fmt(r.initial_balance)}</td>
+                    <td>{fmt(r.contributions_total)}</td>
+                    <td>{fmt(r.sponsorships_cash)}</td>
+                    <td>{fmt(r.sponsorships_kind)}</td>
+                    <td>{fmt(r.expenses_total)}</td>
+                    <td style={{ color: r.final_balance >= 0 ? 'var(--success)' : 'var(--danger)', fontWeight: 700 }}>{fmt(r.final_balance)}</td>
+                    <td>
+                      <button className="icon-btn danger" onClick={() => deleteReport(r.id)} title="Eliminar">🗑</button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MAIN COMPONENT
+// ═══════════════════════════════════════════════════════════════════════════
+const TABS = [
+  { key: 'resumen', label: 'Resumen' },
+  { key: 'aportaciones', label: 'Aportaciones' },
+  { key: 'patrocinios', label: 'Patrocinios' },
+  { key: 'solicitudes', label: 'Solicitudes' },
+  { key: 'salidas', label: 'Salidas' },
+  { key: 'reportes', label: 'Reportes' },
+];
+
+export default function Finance() {
+  const [tab, setTab] = useState('resumen');
+
+  return (
+    <div>
+      <div className="page-header">
+        <h1>Finanzas</h1>
+      </div>
+
+      <div className="finance-tabs">
+        {TABS.map(t => (
+          <button key={t.key} className={`finance-tab ${tab === t.key ? 'active' : ''}`} onClick={() => setTab(t.key)}>
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'resumen' && <TabResumen />}
+      {tab === 'aportaciones' && <TabAportaciones />}
+      {tab === 'patrocinios' && <TabPatrocinios />}
+      {tab === 'solicitudes' && <TabSolicitudes />}
+      {tab === 'salidas' && <TabSalidas />}
+      {tab === 'reportes' && <TabReportes />}
     </div>
   );
 }

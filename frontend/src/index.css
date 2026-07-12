@@ -424,6 +424,37 @@ table a:hover { text-decoration: underline; }
   .page-actions .btn { flex: 1; justify-content: center; }
 }
 
+/* ─── Finance Tabs ─── */
+.finance-tabs {
+  display: flex; gap: 0; border-bottom: 2px solid var(--border); margin-bottom: 1.5rem;
+  overflow-x: auto; flex-wrap: nowrap;
+}
+.finance-tab {
+  padding: .65rem 1.25rem; border: none; background: none; cursor: pointer;
+  font-size: .85rem; font-weight: 500; color: var(--text-light);
+  border-bottom: 2px solid transparent; margin-bottom: -2px; white-space: nowrap;
+  transition: all .15s ease;
+}
+.finance-tab:hover { color: var(--text); background: rgba(0,0,0,.02); }
+.finance-tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+.finance-summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+.finance-summary-card {
+  background: var(--card); padding: 1.25rem; border-radius: var(--radius);
+  box-shadow: 0 1px 3px rgba(0,0,0,.08); border-left: 4px solid var(--primary);
+}
+.finance-summary-card.income { border-left-color: var(--success); }
+.finance-summary-card.expense { border-left-color: var(--danger); }
+.finance-summary-card.balance { border-left-color: var(--info); }
+.finance-summary-card .label { font-size: .78rem; color: var(--text-light); text-transform: uppercase; letter-spacing: .03em; }
+.finance-summary-card .value { font-size: 1.6rem; font-weight: 700; margin-top: .25rem; }
+.finance-summary-card .sub { font-size: .75rem; color: var(--text-light); margin-top: .15rem; }
+.budget-bar { display: flex; align-items: center; gap: .75rem; }
+.budget-bar-track { flex: 1; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; }
+.budget-bar-fill { height: 100%; border-radius: 4px; transition: width .3s; }
+.budget-bar-fill.ok { background: var(--success); }
+.budget-bar-fill.alert { background: var(--warning); }
+.budget-bar-fill.riesgo { background: var(--danger); }
+
 /* ─── Seguimiento Patrocinio ─── */
 .seguimiento-page {
   padding: 0;
