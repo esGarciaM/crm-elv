@@ -394,6 +394,63 @@ if (!commentCols.includes('deleted')) {
   db.exec("ALTER TABLE patrocinio_comments ADD COLUMN file_name TEXT");
 }
 
+// ─── Diseño module ──
+db.exec(`
+  CREATE TABLE IF NOT EXISTS disenos (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    n_orden INTEGER,
+    n_paquete TEXT,
+    descripcion_proyecto TEXT,
+    responsable_patrocinio TEXT,
+    fecha_inicio TEXT,
+    fecha_vencimiento TEXT,
+    prioridad TEXT CHECK(prioridad IN ('MAXIMA','ALTA','MEDIA','BAJA')),
+    costo REAL DEFAULT 0,
+    liquidado REAL DEFAULT 0,
+    comites_involucrados TEXT,
+    responsable_diseno TEXT,
+    status TEXT DEFAULT 'PENDIENTE' CHECK(status IN ('PENDIENTE','SE TRABAJA','EN REVISION','COMPLETADO','CANCELADO')),
+    comentarios_extras TEXT,
+    patrocinio_id INTEGER REFERENCES patrocinios(id) ON DELETE SET NULL,
+    created_by INTEGER REFERENCES users(id),
+    updated_by INTEGER REFERENCES users(id),
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  );
+`);
+
+// Seed existing diseño data from Excel
+const disenoExists = db.prepare('SELECT id FROM disenos LIMIT 1').get();
+if (!disenoExists) {
+  db.prepare(`
+    INSERT INTO disenos (n_orden, n_paquete, descripcion_proyecto, responsable_patrocinio, fecha_inicio, fecha_vencimiento, prioridad, costo, liquidado, comites_involucrados, responsable_diseno, status, comentarios_extras)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(1, '7', 'PAQUETE COMPLETO PARA PERFUMERIA', 'ALBERTO', '2026-06-26', '2026-06-10', 'MAXIMA', 7000, 0.5, 'AUDIO VISUAL,REDES,DISEÑO', 'MELISSA', 'SE TRABAJA', 'SE ESTA TRABAJANDO EN VIDEO');
+  console.log('Default diseño seed data created');
+}
+
+// ─── Redes module ──
+db.exec(`
+  CREATE TABLE IF NOT EXISTS redes (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    folio TEXT,
+    empresa_nombre TEXT,
+    responsable TEXT,
+    actividad TEXT,
+    fecha_inicio TEXT,
+    fecha_limite TEXT,
+    estado TEXT DEFAULT 'incompleto' CHECK(estado IN ('completo','en progreso','incompleto')),
+    post_programados TEXT CHECK(post_programados IN ('SI','No','en diseño')),
+    reels TEXT CHECK(reels IN ('grabados','editando','programados','no aplica')),
+    observaciones TEXT,
+    patrocinio_id INTEGER REFERENCES patrocinios(id) ON DELETE SET NULL,
+    created_by INTEGER REFERENCES users(id),
+    updated_by INTEGER REFERENCES users(id),
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  );
+`);
+
 // ─── Finance module migrations ──
 import { runMigrations } from './migrations/runner.js';
 runMigrations(db);

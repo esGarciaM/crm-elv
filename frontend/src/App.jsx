@@ -14,6 +14,8 @@ import Communications from './pages/Communications';
 import Patrocinios from './pages/Patrocinios';
 import SeguimientoPatrocinio from './pages/SeguimientoPatrocinio';
 import ClientPortal from './pages/ClientPortal';
+import Disenos from './pages/Disenos';
+import Redes from './pages/Redes';
 
 function AppContent() {
   const { user, loading } = useAuth();
@@ -44,6 +46,8 @@ function AppContent() {
         <Route path="/settings" element={<PrivateRoute roles={['admin']}><Settings /></PrivateRoute>} />
         <Route path="/patrocinios" element={<Patrocinios />} />
         <Route path="/patrocinios/:id/seguimiento" element={<SeguimientoPatrocinio />} />
+        <Route path="/disenos" element={<Disenos />} />
+        <Route path="/redes" element={<Redes />} />
         <Route path="/portal" element={<Navigate to="/" />} />
       </Routes>
     </Layout>
