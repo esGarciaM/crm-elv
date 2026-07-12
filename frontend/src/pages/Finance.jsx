@@ -328,11 +328,10 @@ function TabPatrocinios() {
         ) : (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Folio</th><th>Fecha</th><th>Empresa</th><th>Contacto</th><th>Tipo</th><th>Paquete</th><th>Estado Pago</th><th>Visita</th><th>Alumno Obtenido</th><th>Alumno Contactado</th></tr></thead>
+              <thead><tr><th>Fecha</th><th>Empresa</th><th>Contacto</th><th>Tipo</th><th>Paquete</th><th>Estado Pago</th><th>Visita</th><th>Alumno Obtenido</th><th>Alumno Contactado</th></tr></thead>
               <tbody>
                 {data.sponsorships.map(p => (
                   <tr key={p.id}>
-                    <td><strong>#{p.id}</strong></td>
                     <td>{p.date ? new Date(p.date).toLocaleDateString('es-MX') : '—'}</td>
                     <td><strong>{p.company_name || '—'}</strong></td>
                     <td>{p.contact_person || '—'}</td>
