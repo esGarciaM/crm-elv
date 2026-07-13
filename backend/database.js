@@ -154,6 +154,14 @@ db.exec(`
 `);
 
 db.exec(`
+  CREATE TABLE IF NOT EXISTS sponsor_statuses (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT UNIQUE NOT NULL,
+    sort_order INTEGER DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  );
+
   CREATE TABLE IF NOT EXISTS patrocinios (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     company_name TEXT,
@@ -171,6 +179,7 @@ db.exec(`
     tickets_delivered TEXT,
     logo_requested TEXT,
     notes TEXT,
+    sponsor_status_id INTEGER REFERENCES sponsor_statuses(id) ON DELETE SET NULL,
     created_by INTEGER REFERENCES users(id),
     updated_by INTEGER REFERENCES users(id),
     created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
@@ -180,6 +189,7 @@ db.exec(`
 
 // Safe migration for existing patrocinios table
 addColumn('patrocinios', 'updated_by', 'INTEGER REFERENCES users(id)');
+addColumn('patrocinios', 'sponsor_status_id', 'INTEGER REFERENCES sponsor_statuses(id) ON DELETE SET NULL');
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS patrocinio_documents (
@@ -361,6 +371,21 @@ if (!deptExists) {
   const insert = db.prepare('INSERT INTO departments (name) VALUES (?)');
   for (const d of departments) insert.run(d);
   console.log('Default departments created');
+}
+
+// Seed sponsor statuses
+const sponsorStatusExists = db.prepare('SELECT id FROM sponsor_statuses LIMIT 1').get();
+if (!sponsorStatusExists) {
+  const statuses = [
+    ['Por contactar', 1],
+    ['En seguimiento', 2],
+    ['Propuesta enviada', 3],
+    ['Confirmado', 4],
+    ['Pagado', 5]
+  ];
+  const insert = db.prepare('INSERT INTO sponsor_statuses (name, sort_order) VALUES (?, ?)');
+  for (const s of statuses) insert.run(...s);
+  console.log('Default sponsor statuses created');
 }
 
 // ─── Patrocinio tracking (checklist + comments) ──

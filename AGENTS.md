@@ -85,7 +85,7 @@ cd backend && npm install && npm run dev
 |--------|-----------|---------------|-----------|
 | Auth/Users | `/api/auth`, `/api/users` | Login, Users | `users` |
 | Clients | `/api/clients` | Clients, ClientDetail | `clients` |
-| Patrocinios | `/api/patrocinios` | Patrocinios | `patrocinios` |
+| Patrocinios | `/api/patrocinios`, `/api/patrocinios/kanban` | Patrocinios (Lista/Kanban) | `patrocinios`, `sponsor_statuses` |
 | Seguimiento | `/api/patrocinios/:id/seguimiento` | SeguimientoPatrocinio | `patrocinio_checklist`, `patrocinio_comments` |
 | Tasks | `/api/tasks` | Tasks | `tasks`, `task_comments` |
 | Documents | `/api/documents` | (dentro de ClientDetail) | `documents`, `document_comments` |

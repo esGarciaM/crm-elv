@@ -35,6 +35,11 @@ export default function Settings() {
   const [showClModal, setShowClModal] = useState(false);
   const [clForm, setClForm] = useState({ key: '', label: '', sort_order: '' });
 
+  // Sponsor Statuses state
+  const [sponsorStatuses, setSponsorStatuses] = useState([]);
+  const [showSponsorStatusModal, setShowSponsorStatusModal] = useState(false);
+  const [sponsorStatusForm, setSponsorStatusForm] = useState({ name: '', sort_order: '' });
+
   const loadDepts = () => api.get('/departments').then(r => setDepartments(r.data));
   const loadEmps = () => api.get('/employees').then(r => setEmployees(r.data));
   const loadDocTypes = () => api.get('/document-types').then(r => setDocTypes(r.data));
@@ -49,7 +54,9 @@ export default function Settings() {
     }
   };
 
-  useEffect(() => { loadDepts(); loadEmps(); loadDocTypes(); loadPackages(); }, []);
+  const loadSponsorStatuses = () => api.get('/sponsor-statuses').then(r => setSponsorStatuses(r.data));
+
+  useEffect(() => { loadDepts(); loadEmps(); loadDocTypes(); loadPackages(); loadSponsorStatuses(); }, []);
   useEffect(() => { if (tab === 'backups') loadBackups(); }, [tab]);
 
   const loadClCatalog = () => api.get('/packages/checklist-items').then(r => setClCatalog(r.data));
@@ -284,6 +291,7 @@ export default function Settings() {
         <button className={`filter-btn ${tab === 'departments' ? 'active' : ''}`} onClick={() => setTab('departments')}>Departamentos</button>
         <button className={`filter-btn ${tab === 'employees' ? 'active' : ''}`} onClick={() => setTab('employees')}>Empleados</button>
         <button className={`filter-btn ${tab === 'docTypes' ? 'active' : ''}`} onClick={() => setTab('docTypes')}>Tipos de Documento</button>
+        <button className={`filter-btn ${tab === 'sponsorStatuses' ? 'active' : ''}`} onClick={() => setTab('sponsorStatuses')}>Estatus de Patrocinio</button>
         <button className={`filter-btn ${tab === 'packages' ? 'active' : ''}`} onClick={() => setTab('packages')}>Paquetes</button>
         <button className={`filter-btn ${tab === 'checklist' ? 'active' : ''}`} onClick={() => setTab('checklist')}>Checklist</button>
         <button className={`filter-btn ${tab === 'backups' ? 'active' : ''}`} onClick={() => setTab('backups')}>Backups</button>
@@ -399,6 +407,31 @@ export default function Settings() {
                 </tr>
               ))}
               {clCatalog.length === 0 && <tr><td colSpan="4" className="empty-state">Sin elementos de checklist</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {tab === 'sponsorStatuses' && (
+        <div className="card">
+          <div className="docs-header">
+            <h2>Estatus de Patrocinio</h2>
+            <button className="btn" onClick={() => { setSponsorStatusForm({ name: '', sort_order: '' }); setEditingId(null); setShowSponsorStatusModal(true); }}>+ Nuevo</button>
+          </div>
+          <table>
+            <thead><tr><th>Nombre</th><th>Orden</th><th>Acciones</th></tr></thead>
+            <tbody>
+              {sponsorStatuses.map(s => (
+                <tr key={s.id}>
+                  <td>{s.name}</td>
+                  <td>{s.sort_order}</td>
+                  <td>
+                    <button className="btn small" onClick={() => { setSponsorStatusForm({ name: s.name, sort_order: s.sort_order || '' }); setEditingId(s.id); setShowSponsorStatusModal(true); }}>Editar</button>
+                    <button className="btn small danger" style={{ marginLeft: '.5rem' }} onClick={async () => { if (confirm('¿Eliminar este estatus?')) { await api.delete(`/sponsor-statuses/${s.id}`); loadSponsorStatuses(); } }}>Eliminar</button>
+                  </td>
+                </tr>
+              ))}
+              {sponsorStatuses.length === 0 && <tr><td colSpan="3" className="empty-state">Sin estatus configurados</td></tr>}
             </tbody>
           </table>
         </div>
@@ -551,6 +584,28 @@ export default function Settings() {
               <input className="full-width" placeholder="Orden" type="number" value={clForm.sort_order} onChange={e => setClForm({ ...clForm, sort_order: e.target.value })} />
             </div>
             <button className="btn primary" onClick={saveCl}>{editingId ? 'Actualizar' : 'Crear'}</button>
+          </div>
+        </div>
+      )}
+
+      {showSponsorStatusModal && (
+        <div className="modal-overlay" onClick={() => setShowSponsorStatusModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <h2>{editingId ? 'Editar' : 'Nuevo'} Estatus de Patrocinio</h2>
+            {error && <div className="error-msg">{error}</div>}
+            <div className="form-grid">
+              <input className="full-width" placeholder="Nombre del estatus" value={sponsorStatusForm.name} onChange={e => setSponsorStatusForm({ ...sponsorStatusForm, name: e.target.value })} required />
+              <input className="full-width" placeholder="Orden (para mostrar en el tablero)" type="number" value={sponsorStatusForm.sort_order} onChange={e => setSponsorStatusForm({ ...sponsorStatusForm, sort_order: e.target.value })} />
+            </div>
+            <button className="btn primary" onClick={async () => {
+              if (!sponsorStatusForm.name.trim()) return;
+              setError('');
+              try {
+                if (editingId) { await api.put(`/sponsor-statuses/${editingId}`, sponsorStatusForm); }
+                else { await api.post('/sponsor-statuses', sponsorStatusForm); }
+                setShowSponsorStatusModal(false); setSponsorStatusForm({ name: '', sort_order: '' }); setEditingId(null); loadSponsorStatuses();
+              } catch (e) { setError(e.response?.data?.error || 'Error'); }
+            }}>{editingId ? 'Actualizar' : 'Crear'}</button>
           </div>
         </div>
       )}

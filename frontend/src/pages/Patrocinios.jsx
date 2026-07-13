@@ -1,541 +1,543 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import api from '../api';
+import { useTheme } from '../context/ThemeContext';
+import api from '../api/index.js';
 
-function fmt(n) {
-  return '$' + (n || 0).toLocaleString('es-MX');
-}
+const KANBAN_PALETTES = {
+  light: [
+    { bg: 'rgba(0, 180, 216, 0.08)', border: '#00b4d8', glow: 'rgba(0,180,216,0.25)', text: '#0077b6', headerBg: 'linear-gradient(135deg, rgba(0,180,216,0.12), rgba(0,180,216,0.03))', cardBg: '#ffffff', cardText: '#1e293b', cardSub: '#64748b', cardAccent: '#0077b6', emptyBg: 'rgba(0,0,0,0.03)' },
+    { bg: 'rgba(168, 50, 214, 0.08)', border: '#a832d6', glow: 'rgba(168,50,214,0.25)', text: '#7b2cbf', headerBg: 'linear-gradient(135deg, rgba(168,50,214,0.12), rgba(168,50,214,0.03))', cardBg: '#ffffff', cardText: '#1e293b', cardSub: '#64748b', cardAccent: '#7b2cbf', emptyBg: 'rgba(0,0,0,0.03)' },
+    { bg: 'rgba(16, 185, 129, 0.08)', border: '#10b981', glow: 'rgba(16,185,129,0.25)', text: '#047857', headerBg: 'linear-gradient(135deg, rgba(16,185,129,0.12), rgba(16,185,129,0.03))', cardBg: '#ffffff', cardText: '#1e293b', cardSub: '#64748b', cardAccent: '#047857', emptyBg: 'rgba(0,0,0,0.03)' },
+    { bg: 'rgba(245, 158, 11, 0.08)', border: '#f59e0b', glow: 'rgba(245,158,11,0.25)', text: '#b45309', headerBg: 'linear-gradient(135deg, rgba(245,158,11,0.12), rgba(245,158,11,0.03))', cardBg: '#ffffff', cardText: '#1e293b', cardSub: '#64748b', cardAccent: '#b45309', emptyBg: 'rgba(0,0,0,0.03)' },
+    { bg: 'rgba(139, 92, 246, 0.08)', border: '#8b5cf6', glow: 'rgba(139,92,246,0.25)', text: '#6d28d9', headerBg: 'linear-gradient(135deg, rgba(139,92,246,0.12), rgba(139,92,246,0.03))', cardBg: '#ffffff', cardText: '#1e293b', cardSub: '#64748b', cardAccent: '#6d28d9', emptyBg: 'rgba(0,0,0,0.03)' },
+    { bg: 'rgba(236, 72, 153, 0.08)', border: '#ec4899', glow: 'rgba(236,72,153,0.25)', text: '#be185d', headerBg: 'linear-gradient(135deg, rgba(236,72,153,0.12), rgba(236,72,153,0.03))', cardBg: '#ffffff', cardText: '#1e293b', cardSub: '#64748b', cardAccent: '#be185d', emptyBg: 'rgba(0,0,0,0.03)' },
+    { bg: 'rgba(6, 182, 212, 0.08)', border: '#06b6d4', glow: 'rgba(6,182,212,0.25)', text: '#0e7490', headerBg: 'linear-gradient(135deg, rgba(6,182,212,0.12), rgba(6,182,212,0.03))', cardBg: '#ffffff', cardText: '#1e293b', cardSub: '#64748b', cardAccent: '#0e7490', emptyBg: 'rgba(0,0,0,0.03)' },
+    { bg: 'rgba(239, 68, 68, 0.08)', border: '#ef4444', glow: 'rgba(239,68,68,0.25)', text: '#b91c1c', headerBg: 'linear-gradient(135deg, rgba(239,68,68,0.12), rgba(239,68,68,0.03))', cardBg: '#ffffff', cardText: '#1e293b', cardSub: '#64748b', cardAccent: '#b91c1c', emptyBg: 'rgba(0,0,0,0.03)' },
+  ],
+  dark: [
+    { bg: 'rgba(0, 255, 255, 0.12)', border: '#00ffff', glow: 'rgba(0,255,255,0.2)', text: '#00e5ff', headerBg: 'linear-gradient(135deg, rgba(0,255,255,0.18), rgba(0,255,255,0.05))', cardBg: '#161b22', cardText: '#e6edf3', cardSub: '#8b949e', cardAccent: '#00e5ff', emptyBg: 'rgba(255,255,255,0.03)' },
+    { bg: 'rgba(255, 0, 255, 0.12)', border: '#ff00ff', glow: 'rgba(255,0,255,0.2)', text: '#e040e0', headerBg: 'linear-gradient(135deg, rgba(255,0,255,0.18), rgba(255,0,255,0.05))', cardBg: '#161b22', cardText: '#e6edf3', cardSub: '#8b949e', cardAccent: '#e040e0', emptyBg: 'rgba(255,255,255,0.03)' },
+    { bg: 'rgba(0, 255, 128, 0.12)', border: '#00ff80', glow: 'rgba(0,255,128,0.2)', text: '#00e070', headerBg: 'linear-gradient(135deg, rgba(0,255,128,0.18), rgba(0,255,128,0.05))', cardBg: '#161b22', cardText: '#e6edf3', cardSub: '#8b949e', cardAccent: '#00e070', emptyBg: 'rgba(255,255,255,0.03)' },
+    { bg: 'rgba(255, 170, 0, 0.12)', border: '#ffaa00', glow: 'rgba(255,170,0,0.2)', text: '#e09800', headerBg: 'linear-gradient(135deg, rgba(255,170,0,0.18), rgba(255,170,0,0.05))', cardBg: '#161b22', cardText: '#e6edf3', cardSub: '#8b949e', cardAccent: '#e09800', emptyBg: 'rgba(255,255,255,0.03)' },
+    { bg: 'rgba(170, 0, 255, 0.12)', border: '#aa00ff', glow: 'rgba(170,0,255,0.2)', text: '#c040ff', headerBg: 'linear-gradient(135deg, rgba(170,0,255,0.18), rgba(170,0,255,0.05))', cardBg: '#161b22', cardText: '#e6edf3', cardSub: '#8b949e', cardAccent: '#c040ff', emptyBg: 'rgba(255,255,255,0.03)' },
+    { bg: 'rgba(255, 0, 128, 0.12)', border: '#ff0080', glow: 'rgba(255,0,128,0.2)', text: '#ff40a0', headerBg: 'linear-gradient(135deg, rgba(255,0,128,0.18), rgba(255,0,128,0.05))', cardBg: '#161b22', cardText: '#e6edf3', cardSub: '#8b949e', cardAccent: '#ff40a0', emptyBg: 'rgba(255,255,255,0.03)' },
+    { bg: 'rgba(0, 200, 255, 0.12)', border: '#00c8ff', glow: 'rgba(0,200,255,0.2)', text: '#30d0ff', headerBg: 'linear-gradient(135deg, rgba(0,200,255,0.18), rgba(0,200,255,0.05))', cardBg: '#161b22', cardText: '#e6edf3', cardSub: '#8b949e', cardAccent: '#30d0ff', emptyBg: 'rgba(255,255,255,0.03)' },
+    { bg: 'rgba(255, 100, 100, 0.12)', border: '#ff6464', glow: 'rgba(255,100,100,0.2)', text: '#ff7070', headerBg: 'linear-gradient(135deg, rgba(255,100,100,0.18), rgba(255,100,100,0.05))', cardBg: '#161b22', cardText: '#e6edf3', cardSub: '#8b949e', cardAccent: '#ff7070', emptyBg: 'rgba(255,255,255,0.03)' },
+  ],
+  neon: [
+    { bg: 'rgba(0, 255, 255, 0.15)', border: '#00ffff', glow: '#00ffff', text: '#00ffff', headerBg: 'linear-gradient(135deg, rgba(0,255,255,0.22), rgba(0,255,255,0.06))', cardBg: '#15151f', cardText: '#ffffff', cardSub: '#8888aa', cardAccent: '#00ffff', emptyBg: 'rgba(0,255,255,0.04)' },
+    { bg: 'rgba(255, 0, 255, 0.15)', border: '#ff00ff', glow: '#ff00ff', text: '#ff00ff', headerBg: 'linear-gradient(135deg, rgba(255,0,255,0.22), rgba(255,0,255,0.06))', cardBg: '#15151f', cardText: '#ffffff', cardSub: '#8888aa', cardAccent: '#ff00ff', emptyBg: 'rgba(255,0,255,0.04)' },
+    { bg: 'rgba(0, 255, 128, 0.15)', border: '#00ff80', glow: '#00ff80', text: '#00ff80', headerBg: 'linear-gradient(135deg, rgba(0,255,128,0.22), rgba(0,255,128,0.06))', cardBg: '#15151f', cardText: '#ffffff', cardSub: '#8888aa', cardAccent: '#00ff80', emptyBg: 'rgba(0,255,128,0.04)' },
+    { bg: 'rgba(255, 170, 0, 0.15)', border: '#ffaa00', glow: '#ffaa00', text: '#ffaa00', headerBg: 'linear-gradient(135deg, rgba(255,170,0,0.22), rgba(255,170,0,0.06))', cardBg: '#15151f', cardText: '#ffffff', cardSub: '#8888aa', cardAccent: '#ffaa00', emptyBg: 'rgba(255,170,0,0.04)' },
+    { bg: 'rgba(170, 0, 255, 0.15)', border: '#aa00ff', glow: '#aa00ff', text: '#aa00ff', headerBg: 'linear-gradient(135deg, rgba(170,0,255,0.22), rgba(170,0,255,0.06))', cardBg: '#15151f', cardText: '#ffffff', cardSub: '#8888aa', cardAccent: '#aa00ff', emptyBg: 'rgba(170,0,255,0.04)' },
+    { bg: 'rgba(255, 0, 128, 0.15)', border: '#ff0080', glow: '#ff0080', text: '#ff0080', headerBg: 'linear-gradient(135deg, rgba(255,0,128,0.22), rgba(255,0,128,0.06))', cardBg: '#15151f', cardText: '#ffffff', cardSub: '#8888aa', cardAccent: '#ff0080', emptyBg: 'rgba(255,0,128,0.04)' },
+    { bg: 'rgba(0, 200, 255, 0.15)', border: '#00c8ff', glow: '#00c8ff', text: '#00c8ff', headerBg: 'linear-gradient(135deg, rgba(0,200,255,0.22), rgba(0,200,255,0.06))', cardBg: '#15151f', cardText: '#ffffff', cardSub: '#8888aa', cardAccent: '#00c8ff', emptyBg: 'rgba(0,200,255,0.04)' },
+    { bg: 'rgba(255, 100, 100, 0.15)', border: '#ff6464', glow: '#ff6464', text: '#ff6464', headerBg: 'linear-gradient(135deg, rgba(255,100,100,0.22), rgba(255,100,100,0.06))', cardBg: '#15151f', cardText: '#ffffff', cardSub: '#8888aa', cardAccent: '#ff6464', emptyBg: 'rgba(255,100,100,0.04)' },
+  ],
+};
+
+const KANBAN_CONTAINER_BG = {
+  light: '#f0f2f5',
+  dark: '#0d1117',
+  neon: 'rgba(12, 12, 22, 0.95)',
+};
+
+const KANBAN_COLUMN_BG = {
+  light: '#ffffff',
+  dark: '#161b22',
+  neon: 'rgba(15, 15, 30, 0.95)',
+};
 
 export default function Patrocinios() {
-  const navigate = useNavigate();
+  const { theme } = useTheme();
+  const [viewMode, setViewMode] = useState('list'); // 'list' o 'kanban'
   const [patrocinios, setPatrocinios] = useState([]);
-  const [stats, setStats] = useState(null);
-  const [search, setSearch] = useState('');
+  const [kanbanData, setKanbanData] = useState([]);
+  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
-  const [showForm, setShowForm] = useState(false);
-  const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({});
-  const [formErrors, setFormErrors] = useState([]);
-
-  // Detail panel
-  const [selected, setSelected] = useState(null);
-  const [detail, setDetail] = useState(null);
-  const [detailLoading, setDetailLoading] = useState(false);
-
-  // Documents
-  const [uploading, setUploading] = useState(false);
-
-  // Tasks
-  const [newTask, setNewTask] = useState({ title: '', priority: 'medium', assigned_to: '' });
-  const [users, setUsers] = useState([]);
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingPatrocinio, setEditingPatrocinio] = useState(null);
+  const [formData, setFormData] = useState({
+    company_name: '', contact_person: '', phone: '', sponsorship_type: '', package: '',
+    visit_status: '', payment_status: '', student_obtained: '', student_contacted: '',
+    in_kind_detail: '', payment_detail: '', social_media_fulfilled: '', tickets_delivered: '',
+    logo_requested: '', notes: ''
+  });
   const [packages, setPackages] = useState([]);
+  const [sponsorStatuses, setSponsorStatuses] = useState([]);
+  const [error, setError] = useState('');
+  const navigate = useNavigate();
+  const [hoveredCardId, setHoveredCardId] = useState(null);
 
-  const load = () => {
-    api.get(`/patrocinios?page=${page}&search=${search}`).then((r) => {
-      setPatrocinios(r.data.patrocinios);
-      setTotalPages(r.data.totalPages);
-    });
-  };
+  useEffect(() => {
+    loadPackages();
+    loadSponsorStatuses();
+    if (viewMode === 'list') loadPatrocinios();
+    else loadKanban();
+  }, [page, search, viewMode]);
 
-  const loadStats = () => {
-    api.get('/patrocinios/stats').then((r) => setStats(r.data)).catch(() => {});
-  };
-
-  const loadUsers = () => {
-    api.get('/users').then((r) => setUsers(Array.isArray(r.data) ? r.data : [])).catch(() => {});
-  };
-
-  const loadPackages = () => {
-    api.get('/packages').then((r) => setPackages(Array.isArray(r.data) ? r.data : [])).catch(() => {});
-  };
-
-  useEffect(() => { load(); }, [page, search]);
-  useEffect(() => { loadStats(); loadUsers(); loadPackages(); }, []);
-
-  // ── Detail panel ──
-  const openDetail = async (p) => {
-    setSelected(p);
-    setDetailLoading(true);
+  const loadPatrocinios = async () => {
     try {
-      const r = await api.get(`/patrocinios/${p.id}`);
-      setDetail(r.data);
-    } catch {
-      setDetail(null);
-    }
-    setDetailLoading(false);
-  };
-
-  const closeDetail = () => {
-    setSelected(null);
-    setDetail(null);
-  };
-
-  // ── CRUD ──
-  const validateForm = () => {
-    const errs = [];
-    if (form.sponsorship_type && !['Monetario', 'Especie', 'Especie/Monetario', 'Pendiente'].includes(form.sponsorship_type)) {
-      errs.push('Tipo de patrocinio inválido');
-    }
-    if (form.payment_status && !['Pagado', 'Pendiente', 'Abonado', 'Cancelado'].includes(form.payment_status)) {
-      errs.push('Estado de pago inválido');
-    }
-    if (form.visit_status && !['Visitado', 'En linea', 'Visita pendiente', 'Visita agendada', 'No quiso'].includes(form.visit_status)) {
-      errs.push('Estado de visita inválido');
-    }
-    setFormErrors(errs);
-    return errs.length === 0;
-  };
-
-  const handleSave = async () => {
-    if (!validateForm()) return;
-    try {
-      if (editing) {
-        await api.put(`/patrocinios/${editing}`, form);
-      } else {
-        await api.post('/patrocinios', form);
-      }
-      setShowForm(false);
-      setEditing(null);
-      setForm({});
-      setFormErrors([]);
-      load();
-      loadStats();
+      const res = await api.get(`/patrocinios?page=${page}&limit=20&search=${search}`);
+      setPatrocinios(res.data.patrocinios);
+      setTotal(res.data.total);
+      setTotalPages(res.data.totalPages);
     } catch (err) {
-      const data = err.response?.data;
-      if (data?.details) setFormErrors(data.details);
-      else if (data?.error) setFormErrors([data.error]);
-      else setFormErrors(['Error al guardar']);
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleEdit = (p) => {
-    setForm({ ...p });
-    setEditing(p.id);
-    setShowForm(true);
-    setFormErrors([]);
+  const loadKanban = async () => {
+    try {
+      setLoading(true);
+      const res = await api.get('/patrocinios/kanban');
+      setKanbanData(res.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadPackages = async () => {
+    try {
+      const res = await api.get('/packages?all=true');
+      setPackages(res.data);
+    } catch (err) { console.error(err); }
+  };
+
+  const loadSponsorStatuses = async () => {
+    try {
+      const res = await api.get('/sponsor-statuses');
+      setSponsorStatuses(res.data);
+    } catch (err) { console.error(err); }
+  };
+
+  const handleSearch = (e) => {
+    setSearch(e.target.value);
+    setPage(1);
+  };
+
+  const handleDragStart = (e, patrocinioId) => {
+    e.dataTransfer.setData('text/plain', patrocinioId.toString());
+  };
+
+  const handleDrop = async (e, targetStatusId) => {
+    e.preventDefault();
+    const patrocinioId = parseInt(e.dataTransfer.getData('text/plain'));
+    if (!patrocinioId || !targetStatusId) return;
+
+    try {
+      await api.put('/patrocinios/kanban/status', {
+        patrocinio_id: patrocinioId,
+        sponsor_status_id: targetStatusId
+      });
+      loadKanban();
+    } catch (err) {
+      console.error(err);
+      setError('Error al actualizar estatus');
+    }
+  };
+
+  const openNew = () => {
+    setEditingPatrocinio(null);
+    setFormData({
+      company_name: '', contact_person: '', phone: '', sponsorship_type: '', package: '',
+      visit_status: '', payment_status: '', student_obtained: '', student_contacted: '',
+      in_kind_detail: '', payment_detail: '', social_media_fulfilled: '', tickets_delivered: '',
+      logo_requested: '', notes: ''
+    });
+    setError('');
+    setShowCreateModal(true);
+  };
+
+  const openEdit = (p) => {
+    setEditingPatrocinio(p);
+    setFormData({
+      company_name: p.company_name || '',
+      contact_person: p.contact_person || '',
+      phone: p.phone || '',
+      sponsorship_type: p.sponsorship_type || '',
+      package: p.package || '',
+      visit_status: p.visit_status || '',
+      payment_status: p.payment_status || '',
+      student_obtained: p.student_obtained || '',
+      student_contacted: p.student_contacted || '',
+      in_kind_detail: p.in_kind_detail || '',
+      payment_detail: p.payment_detail || '',
+      social_media_fulfilled: p.social_media_fulfilled || '',
+      tickets_delivered: p.tickets_delivered || '',
+      logo_requested: p.logo_requested || '',
+      notes: p.notes || '',
+      sponsor_status_id: p.sponsor_status_id || ''
+    });
+    setError('');
+    setShowCreateModal(true);
+  };
+
+  const handleSubmit = async () => {
+    if (!formData.company_name.trim()) {
+      setError('El nombre de la empresa es requerido');
+      return;
+    }
+    try {
+      if (editingPatrocinio) {
+        await api.put(`/patrocinios/${editingPatrocinio.id}`, formData);
+      } else {
+        await api.post('/patrocinios', formData);
+      }
+      setShowCreateModal(false);
+      if (viewMode === 'list') loadPatrocinios();
+      else loadKanban();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Error al guardar');
+    }
   };
 
   const handleDelete = async (id) => {
     if (!confirm('¿Eliminar este patrocinio?')) return;
-    await api.delete(`/patrocinios/${id}`);
-    if (selected?.id === id) closeDetail();
-    load();
-    loadStats();
-  };
-
-  const openNew = () => {
-    setForm({});
-    setEditing(null);
-    setFormErrors([]);
-    setShowForm(!showForm);
-  };
-
-  const set = (field, value) => setForm({ ...form, [field]: value });
-
-  // ── Document upload ──
-  const handleUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file || !detail) return;
-    setUploading(true);
-    const fd = new FormData();
-    fd.append('file', file);
-    fd.append('category', 'general');
     try {
-      await api.post(`/patrocinios/${detail.id}/documents`, fd, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      const r = await api.get(`/patrocinios/${detail.id}`);
-      setDetail(r.data);
+      await api.delete(`/patrocinios/${id}`);
+      if (viewMode === 'list') loadPatrocinios();
+      else loadKanban();
     } catch (err) {
-      alert('Error al subir archivo: ' + (err.response?.data?.error || err.message));
+      console.error(err);
     }
-    setUploading(false);
-    e.target.value = '';
   };
 
-  const handleDeleteDoc = async (docId) => {
-    if (!confirm('¿Eliminar este documento?')) return;
-    await api.delete(`/patrocinios/${detail.id}/documents/${docId}`);
-    const r = await api.get(`/patrocinios/${detail.id}`);
-    setDetail(r.data);
-  };
+  if (loading) return <div>Cargando...</div>;
 
-  // ── Tasks ──
-  const handleCreateTask = async () => {
-    if (!newTask.title.trim()) return;
-    await api.post(`/patrocinios/${detail.id}/tasks`, newTask);
-    setNewTask({ title: '', priority: 'medium', assigned_to: '' });
-    const r = await api.get(`/patrocinios/${detail.id}`);
-    setDetail(r.data);
-  };
-
-  // ── Helper ──
-  const statusColor = (s) => {
-    const map = {
-      'Pagado': 'success', 'Abonado': 'info', 'Pendiente': 'warning', 'Cancelado': 'danger',
-      'Visitado': 'success', 'En linea': 'info', 'Visita pendiente': 'warning', 'Visita agendada': 'info', 'No quiso': 'danger',
-      'Cumplido': 'success', 'No': 'danger', 'No requiere': 'neutral',
-      'Entregados': 'success'
-    };
-    return map[s] || '';
-  };
+  const colors = KANBAN_PALETTES[theme] || KANBAN_PALETTES.light;
 
   return (
     <div>
       <div className="page-header">
         <h1>Patrocinios</h1>
-          <button className="btn success" onClick={openNew}>
-            {showForm ? 'Cancelar' : '+ Nuevo Patrocinio'}
-          </button>
+        <button className="btn primary" onClick={openNew}>+ Nuevo</button>
       </div>
 
-      {/* ── Stats ── */}
-      {stats && (
-        <div className="stats-grid" style={{ marginBottom: '1.5rem' }}>
-          <div className="stat-card">
-            <span className="stat-num">{stats.total}</span>
-            <span className="stat-label">Total Patrocinios</span>
-          </div>
-          <div className="stat-card success">
-            <span className="stat-num">{fmt(stats.totalPagado)}</span>
-            <span className="stat-label">Recaudado</span>
-            <span className="stat-sub">{stats.byPayment?.find(p => p.payment_status === 'Pagado')?.count || 0} pagados</span>
-          </div>
-          <div className="stat-card warning">
-            <span className="stat-num">{fmt(stats.totalPendiente)}</span>
-            <span className="stat-label">Por Cobrar</span>
-            <span className="stat-sub">{stats.byPayment?.find(p => p.payment_status === 'Pendiente')?.count || 0} pendientes</span>
-          </div>
-          <div className="stat-card info">
-            <span className="stat-num">{fmt(stats.totalAbonado)}</span>
-            <span className="stat-label">Abonado Parcial</span>
-          </div>
-          <div className="stat-card" style={{ borderLeftColor: 'var(--accent)' }}>
-            <span className="stat-num">{stats.inKindCount}</span>
-            <span className="stat-label">En Especie</span>
-            <span className="stat-sub">{fmt(stats.inKindEstimated)} estimado</span>
-          </div>
-          <div className="stat-card" style={{ borderLeftColor: 'var(--warning)' }}>
-            <span className="stat-num">{fmt(stats.totalEstimated)}</span>
-            <span className="stat-label">Meta Total</span>
-          </div>
-        </div>
-      )}
+      <div className="finance-tabs" style={{ marginBottom: '1.5rem' }}>
+        <button className={`finance-tab ${viewMode === 'list' ? 'active' : ''}`} onClick={() => setViewMode('list')}>Lista</button>
+        <button className={`finance-tab ${viewMode === 'kanban' ? 'active' : ''}`} onClick={() => setViewMode('kanban')}>Kanban</button>
+      </div>
 
-      {/* ── Search ── */}
-      <input
-        className="search-input"
-        placeholder="Buscar por patrocinador, contacto o alumno..."
-        value={search}
-        onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-      />
-
-      {/* ── Form Modal ── */}
-      {showForm && (
-        <div className="modal-overlay" onClick={() => { setShowForm(false); setEditing(null); setFormErrors([]); }}>
-          <div className="modal modal-wide" onClick={(e) => e.stopPropagation()}>
-            <h2>{editing ? 'Editar Patrocinio' : 'Nuevo Patrocinio'}</h2>
-
-            {formErrors.length > 0 && (
-              <div className="form-errors">
-                {formErrors.map((e, i) => <p key={i} style={{ color: 'var(--danger)', margin: '2px 0' }}>⚠ {e}</p>)}
-              </div>
-            )}
-
-            <div className="form-grid">
-              <input placeholder="Nombre del patrocinador (empresa o persona)" value={form.company_name || ''} onChange={(e) => set('company_name', e.target.value)} />
-              <input placeholder="Nombre de la persona que dio el patrocinio" value={form.contact_person || ''} onChange={(e) => set('contact_person', e.target.value)} />
-              <input placeholder="Contacto (teléfono)" value={form.phone || ''} onChange={(e) => set('phone', e.target.value)} />
-              <select value={form.sponsorship_type || ''} onChange={(e) => set('sponsorship_type', e.target.value)}>
-                <option value="">Tipo de patrocinio</option>
-                <option>Monetario</option>
-                <option>Especie</option>
-                <option>Especie/Monetario</option>
-                <option>Pendiente</option>
-              </select>
-              <select value={form.package || ''} onChange={(e) => set('package', e.target.value)}>
-                <option value="">Paquete</option>
-                {packages.map(p => (
-                  <option key={p.id} value={p.name}>{p.name}</option>
+      {viewMode === 'list' && (
+        <>
+          <div className="filter-bar">
+            <input type="text" placeholder="Buscar patrocinios..." value={search} onChange={handleSearch} style={{ width: '100%' }} />
+          </div>
+          
+          <div className="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Empresa</th>
+                  <th>Contacto</th>
+                  <th>Paquete</th>
+                  <th>Estatus</th>
+                  <th>Tipo</th>
+                  <th>Pago</th>
+                  <th>Acciones</th>
+                </tr>
+              </thead>
+              <tbody>
+                {patrocinios.map(p => (
+                  <tr key={p.id}>
+                    <td><strong>{p.company_name}</strong></td>
+                    <td>{p.contact_person}</td>
+                    <td>{p.package || '—'}</td>
+                    <td><span className="status-badge info">{p.sponsor_status_name || 'Sin estatus'}</span></td>
+                    <td><span className="status-badge">{p.sponsorship_type || '—'}</span></td>
+                    <td><span className={`status-badge ${p.payment_status === 'Pagado' ? 'success' : p.payment_status === 'Cancelado' ? 'danger' : ''}`}>{p.payment_status || 'Pendiente'}</span></td>
+                    <td>
+                      <button className="btn small" onClick={() => navigate(`/patrocinios/${p.id}/seguimiento`)}>Ver</button>
+                      <button className="btn small" style={{ marginLeft: '.25rem' }} onClick={() => openEdit(p)}>Editar</button>
+                      <button className="btn small danger" style={{ marginLeft: '.25rem' }} onClick={() => handleDelete(p.id)}>X</button>
+                    </td>
+                  </tr>
                 ))}
-              </select>
-              <select value={form.visit_status || ''} onChange={(e) => set('visit_status', e.target.value)}>
-                <option value="">Visitado o Falta por visitar</option>
-                <option>Visitado</option>
-                <option>En linea</option>
-                <option>Visita pendiente</option>
-                <option>Visita agendada</option>
-                <option>No quiso</option>
-              </select>
-              <select value={form.payment_status || ''} onChange={(e) => set('payment_status', e.target.value)}>
-                <option value="">Pagado o no</option>
-                <option>Pagado</option>
-                <option>Pendiente</option>
-                <option>Abonado</option>
-                <option>Cancelado</option>
-              </select>
-              <input placeholder="Alumno que lo consiguió" value={form.student_obtained || ''} onChange={(e) => set('student_obtained', e.target.value)} />
-              <input placeholder="Alumno que se comunicó" value={form.student_contacted || ''} onChange={(e) => set('student_contacted', e.target.value)} />
-              <textarea className="full-width" placeholder="En caso de ser en especie, registrar lo que se acordó" value={form.in_kind_detail || ''} onChange={(e) => set('in_kind_detail', e.target.value)} />
-              <input placeholder="Cantidad abonada y nombre del alumno que recibió" value={form.payment_detail || ''} onChange={(e) => set('payment_detail', e.target.value)} />
-              <select value={form.social_media_fulfilled || ''} onChange={(e) => set('social_media_fulfilled', e.target.value)}>
-                <option value="">Patrocinio cumplido en redes</option>
-                <option>Cumplido</option>
-                <option>No</option>
-                <option>No requiere</option>
-              </select>
-              <select value={form.tickets_delivered || ''} onChange={(e) => set('tickets_delivered', e.target.value)}>
-                <option value="">Boletos entregados</option>
-                <option>Entregados</option>
-                <option>No</option>
-                <option>No requiere</option>
-              </select>
-              <input placeholder="Pedir logo (PDF, .ai o .eps)" value={form.logo_requested || ''} onChange={(e) => set('logo_requested', e.target.value)} />
-              <textarea className="full-width" placeholder="Notas" value={form.notes || ''} onChange={(e) => set('notes', e.target.value)} />
-            </div>
-            <button className="btn" onClick={handleSave} style={{ marginTop: '1rem' }}>Guardar</button>
+                {patrocinios.length === 0 && <tr><td colSpan="6" className="empty-state">No se encontraron patrocinios</td></tr>}
+              </tbody>
+            </table>
           </div>
+
+          {totalPages > 1 && (
+            <div className="pagination">
+              <button disabled={page === 1} onClick={() => setPage(p => p - 1)}>Anterior</button>
+              <span>Página {page} de {totalPages} ({total} registros)</span>
+              <button disabled={page === totalPages} onClick={() => setPage(p => p + 1)}>Siguiente</button>
+            </div>
+          )}
+        </>
+      )}
+
+      {viewMode === 'kanban' && (
+        <div 
+          className="kanban-container" 
+          style={{ 
+            display: 'flex', 
+            gap: '1rem', 
+            overflowX: 'auto', 
+            minHeight: '500px',
+            background: KANBAN_CONTAINER_BG[theme] || KANBAN_CONTAINER_BG.light,
+            borderRadius: '12px',
+            padding: '1rem',
+            boxShadow: theme === 'neon' 
+              ? '0 4px 24px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.03)' 
+              : '0 2px 12px rgba(0,0,0,0.08)',
+            border: theme === 'light' ? '1px solid var(--border)' : 'none'
+          }}
+        >
+          {kanbanData.map((col, colIndex) => {
+            const color = colors[colIndex % colors.length];
+            const isDark = theme === 'dark' || theme === 'neon';
+            return (
+              <div 
+                key={col.id}
+                className="kanban-column"
+                style={{ 
+                  minWidth: '300px', 
+                  width: '300px', 
+                  background: KANBAN_COLUMN_BG[theme] || KANBAN_COLUMN_BG.light, 
+                  borderRadius: '12px', 
+                  display: 'flex',
+                  flexDirection: 'column',
+                  borderTop: `1px solid ${color.border}${theme === 'light' ? '30' : '22'}`,
+                  borderRight: `1px solid ${color.border}${theme === 'light' ? '30' : '22'}`,
+                  borderBottom: `1px solid ${color.border}${theme === 'light' ? '30' : '22'}`,
+                  borderLeft: `3px solid ${color.border}`,
+                  boxShadow: isDark 
+                    ? `0 0 20px ${color.glow}18, 0 4px 24px rgba(0,0,0,0.5)` 
+                    : `0 1px 6px rgba(0,0,0,0.06)`,
+                  overflow: 'hidden'
+                }}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => handleDrop(e, col.id)}
+              >
+                {/* Column Header — neon gradient bar */}
+                <div style={{ 
+                  padding: '0.85rem 1rem', 
+                  background: color.headerBg,
+                  borderBottom: `2px solid ${color.border}33`,
+                  position: 'relative',
+                  overflow: 'hidden'
+                }}>
+                  {/* Subtle scanline effect for dark themes */}
+                  {isDark && (
+                    <div style={{
+                      position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+                      background: 'repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.06) 2px, rgba(0,0,0,0.06) 4px)',
+                      pointerEvents: 'none'
+                    }} />
+                  )}
+                  <h3 style={{ 
+                    margin: 0, 
+                    fontSize: '0.9rem', 
+                    fontWeight: '700',
+                    display: 'flex', 
+                    justifyContent: 'space-between', 
+                    alignItems: 'center',
+                    color: color.text,
+                    textShadow: isDark ? `0 0 12px ${color.glow}77, 0 0 4px ${color.glow}44` : 'none',
+                    letterSpacing: '0.04em',
+                    textTransform: 'uppercase',
+                    position: 'relative',
+                    zIndex: 1
+                  }}>
+                    {col.name}
+                    <span style={{ 
+                      background: isDark ? `${color.border}18` : `${color.border}15`,
+                      border: `1px solid ${color.border}${isDark ? '44' : '30'}`,
+                      color: color.text,
+                      padding: '3px 10px', 
+                      borderRadius: '20px', 
+                      fontSize: '0.7rem',
+                      fontWeight: '700',
+                      textShadow: isDark ? `0 0 6px ${color.glow}55` : 'none',
+                      boxShadow: isDark ? `0 0 10px ${color.glow}22, inset 0 0 8px ${color.glow}0a` : 'none',
+                      minWidth: '24px',
+                      textAlign: 'center'
+                    }}>
+                      {col.patrocinios.length}
+                    </span>
+                  </h3>
+                </div>
+                
+                {/* Cards Container */}
+                <div style={{ 
+                  flex: 1, 
+                  overflowY: 'auto', 
+                  padding: '0.6rem', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  gap: '0.6rem',
+                  background: isDark ? 'rgba(0,0,0,0.2)' : 'rgba(0,0,0,0.02)'
+                }}>
+                  {col.patrocinios.length === 0 && (
+                    <div style={{ 
+                      textAlign: 'center', 
+                      padding: '2.5rem 1rem', 
+                      color: isDark ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.2)',
+                      fontSize: '0.8rem',
+                      fontStyle: 'italic',
+                      letterSpacing: '0.02em'
+                    }}>
+                      Sin patrocinios
+                    </div>
+                  )}
+                  {col.patrocinios.map(p => {
+                    const isHovered = hoveredCardId === p.id;
+                    return (
+                      <div 
+                        key={p.id}
+                        draggable
+                        onDragStart={(e) => handleDragStart(e, p.id)}
+                        onMouseEnter={() => setHoveredCardId(p.id)}
+                        onMouseLeave={() => setHoveredCardId(null)}
+                        className="kanban-card"
+                        style={{ 
+                          cursor: 'grab',
+                          padding: '0.85rem 1rem',
+                          background: isHovered 
+                            ? (isDark 
+                                ? `linear-gradient(135deg, ${color.cardBg}ee, ${color.cardBg}dd)` 
+                                : `linear-gradient(135deg, ${color.cardBg}, ${color.bg.replace('0.08', '0.04')})`)
+                            : color.cardBg,
+                          borderRadius: '10px',
+                          borderTop: `1px solid ${color.border}${isHovered ? '44' : '15'}`,
+                          borderRight: `1px solid ${color.border}${isHovered ? '44' : '15'}`,
+                          borderBottom: `1px solid ${color.border}${isHovered ? '44' : '15'}`,
+                          borderLeft: `3px solid ${color.border}`,
+                          boxShadow: isHovered 
+                            ? (isDark
+                                ? `0 0 24px ${color.glow}30, 0 6px 16px rgba(0,0,0,0.5), inset 0 0 30px ${color.glow}08`
+                                : `0 4px 16px ${color.glow}, 0 1px 4px rgba(0,0,0,0.08)`)
+                            : (isDark
+                                ? '0 2px 8px rgba(0,0,0,0.35)'
+                                : '0 1px 4px rgba(0,0,0,0.06)'),
+                          transform: isHovered ? 'translateY(-2px) scale(1.01)' : 'none',
+                          transition: 'all 0.2s ease'
+                        }}
+                        onClick={() => navigate(`/patrocinios/${p.id}/seguimiento`)}
+                      >
+                        <div style={{ 
+                          fontWeight: '600', 
+                          marginBottom: '0.4rem',
+                          color: color.cardText,
+                          fontSize: '0.9rem',
+                          textShadow: isHovered && isDark ? `0 0 8px ${color.glow}33` : 'none'
+                        }}>{p.company_name}</div>
+                        <div style={{ fontSize: '0.8rem', lineHeight: '1.5' }}>
+                          <div style={{ color: color.cardSub }}>{p.contact_person}</div>
+                          <div style={{ 
+                            marginTop: '0.3rem', 
+                            color: color.cardAccent, 
+                            opacity: 0.75, 
+                            fontSize: '0.72rem',
+                            fontWeight: '600',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.03em'
+                          }}>{p.package || 'Sin paquete'}</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })}
         </div>
       )}
 
-      {/* ── Table ── */}
-      <div className="table-container">
-        <table>
-          <thead>
-            <tr>
-              <th title="Nombre del Patrocinador (empresa o persona)">Patrocinador</th>
-              <th title="Nombre de la persona que dio el patrocinio">Persona</th>
-              <th title="Contacto de la persona que dio el patrocinio">Teléfono</th>
-              <th title="Tipo de patrocinio">Tipo</th>
-              <th title="Paquete">Paquete</th>
-              <th title="Visitado o Falta por visitar">Visita</th>
-              <th title="Pagado o no">Pago</th>
-              <th title="Alumno que lo consiguió">Alumno</th>
-              <th title="Alumno que se comunicó">Alumno Contactado</th>
-              <th title="Patrocinio cumplido en redes">Redes</th>
-              <th title="Boletos entregados">Boletos</th>
-              <th title="Usuario que creó el registro">Creado por</th>
-              <th title="Porcentaje de avance del checklist del paquete">Avance</th>
-              <th title="Acciones disponibles">Acciones</th>
-            </tr>
-          </thead>
-          <tbody>
-            {patrocinios.map((p) => (
-              <tr key={p.id}
-                className={selected?.id === p.id ? 'row-selected' : ''}
-                onClick={() => openDetail(p)}
-                style={{ cursor: 'pointer' }}
-              >
-                <td><strong>{p.company_name || 'Sin nombre'}</strong></td>
-                <td>{p.contact_person || '-'}</td>
-                <td>{p.phone || '-'}</td>
-                <td><span className={`status-badge ${statusColor(p.sponsorship_type)}`}>{p.sponsorship_type || '-'}</span></td>
-                <td>{p.package || '-'}</td>
-                <td><span className={`status-badge ${statusColor(p.visit_status)}`}>{p.visit_status || '-'}</span></td>
-                <td><span className={`status-badge ${statusColor(p.payment_status)}`}>{p.payment_status || '-'}</span></td>
-                <td>{p.student_obtained || '-'}</td>
-                <td>{p.student_contacted || '-'}</td>
-                <td><span className={`status-badge ${statusColor(p.social_media_fulfilled)}`}>{p.social_media_fulfilled || '-'}</span></td>
-                <td><span className={`status-badge ${statusColor(p.tickets_delivered)}`}>{p.tickets_delivered || '-'}</span></td>
-                <td style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>{p.created_by_name || '—'}</td>
-                <td style={{ minWidth: '100px' }}>
-                  {p.checklist_total > 0 ? (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
-                      <div className="mini-progress-track">
-                        <div className="mini-progress-fill" style={{ width: `${Math.round((p.checklist_completed / p.checklist_total) * 100)}%` }} />
-                      </div>
-                      <span style={{ fontSize: '0.78rem', fontWeight: 600, color: p.checklist_completed === p.checklist_total ? 'var(--success)' : 'var(--text-muted)', whiteSpace: 'nowrap' }}>
-                        {Math.round((p.checklist_completed / p.checklist_total) * 100)}%
-                      </span>
-                    </div>
-                  ) : (
-                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>—</span>
-                  )}
-                </td>
-                <td className="actions-cell" onClick={(e) => e.stopPropagation()}>
-                  <button className="icon-btn seguimiento" title="Seguimiento" onClick={() => navigate(`/patrocinios/${p.id}/seguimiento`)}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
-                      <rect x="9" y="3" width="6" height="4" rx="1"/>
-                      <path d="M9 14l2 2 4-4"/>
-                    </svg>
-                  </button>
-                  <button className="icon-btn edit" title="Editar" onClick={() => handleEdit(p)}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/>
-                      <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/>
-                    </svg>
-                  </button>
-                  <button className="icon-btn danger" title="Eliminar" onClick={() => handleDelete(p.id)}>
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="3 6 5 6 21 6"/>
-                      <path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
-                      <line x1="10" y1="11" x2="10" y2="17"/>
-                      <line x1="14" y1="11" x2="14" y2="17"/>
-                    </svg>
-                  </button>
-                </td>
-              </tr>
-            ))}
-            {patrocinios.length === 0 && (
-              <tr><td colSpan="14" style={{ textAlign: 'center', color: 'var(--text-light)', padding: '2rem' }}>Sin patrocinios registrados</td></tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-
-      {/* ── Pagination ── */}
-      <div className="pagination">
-        <button disabled={page <= 1} onClick={() => setPage(page - 1)}>Anterior</button>
-        <span>Página {page} de {totalPages}</span>
-        <button disabled={page >= totalPages} onClick={() => setPage(page + 1)}>Siguiente</button>
-      </div>
-
-      {/* ═══════════════════════════════════════════════════════
-          DETAIL PANEL (slide-over)
-         ═══════════════════════════════════════════════════════ */}
-      {selected && (
-        <div className="modal-overlay" onClick={closeDetail}>
-          <div className="modal modal-wide detail-panel" onClick={(e) => e.stopPropagation()}
-               style={{ maxHeight: '90vh', overflowY: 'auto' }}>
-            {detailLoading ? (
-              <p style={{ textAlign: 'center', padding: '2rem' }}>Cargando detalle...</p>
-            ) : detail ? (
-              <>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                  <h2 style={{ margin: 0 }}>{detail.company_name || 'Sin nombre'}</h2>
-                  <button className="btn-sm" onClick={closeDetail}>✕ Cerrar</button>
-                </div>
-
-                {/* Info Grid */}
-                <div className="form-grid" style={{ marginBottom: '1.5rem' }}>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>CONTACTO</label>{detail.contact_person || '—'}</div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>TELÉFONO</label>{detail.phone || '—'}</div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>TIPO</label><span className={`status-badge ${statusColor(detail.sponsorship_type)}`}>{detail.sponsorship_type || '—'}</span></div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>PAQUETE</label>{detail.package || '—'}</div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>VISITA</label><span className={`status-badge ${statusColor(detail.visit_status)}`}>{detail.visit_status || '—'}</span></div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>PAGO</label><span className={`status-badge ${statusColor(detail.payment_status)}`}>{detail.payment_status || '—'}</span></div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>ALUMNO QUE LO CONSIGUIÓ</label>{detail.student_obtained || '—'}</div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>ALUMNO QUE SE COMUNICÓ</label>{detail.student_contacted || '—'}</div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>REDES SOCIALES</label>{detail.social_media_fulfilled || '—'}</div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>BOLETOS</label>{detail.tickets_delivered || '—'}</div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>LOGO</label>{detail.logo_requested || '—'}</div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>DETALLE ESPECIE</label>{detail.in_kind_detail || '—'}</div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>DETALLE PAGO</label>{detail.payment_detail || '—'}</div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>NOTAS</label>{detail.notes || '—'}</div>
-                </div>
-
-                {/* Audit info */}
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-light)', marginBottom: '1.5rem', padding: '0.5rem', background: 'var(--bg-secondary)', borderRadius: '6px' }}>
-                  <strong>Creado por:</strong> {detail.created_by_name || '—'} ·{' '}
-                  <strong>Fecha:</strong> {detail.created_at || '—'}
-                  {detail.updated_by_name && (
-                    <> · <strong>Última modificación:</strong> {detail.updated_by_name} ({detail.updated_at || '—'})</>
-                  )}
-                </div>
-
-                {/* ── Documents ── */}
-                <h3>Documentos</h3>
-                <div style={{ marginBottom: '1rem' }}>
-                  <input
-                    type="file"
-                    onChange={handleUpload}
-                    disabled={uploading}
-                    style={{ fontSize: '0.85rem' }}
-                  />
-                  {uploading && <span style={{ marginLeft: '0.5rem', color: 'var(--text-muted)' }}>Subiendo...</span>}
-                </div>
-                {detail.documents && detail.documents.length > 0 ? (
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Archivo</th>
-                        <th>Tipo</th>
-                        <th>Tamaño</th>
-                        <th>Subido por</th>
-                        <th>Fecha</th>
-                        <th>Acción</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {detail.documents.map((doc) => (
-                        <tr key={doc.id}>
-                          <td>{doc.original_name}</td>
-                          <td style={{ fontSize: '0.75rem' }}>{doc.mime_type}</td>
-                          <td style={{ fontSize: '0.75rem' }}>{(doc.size / 1024).toFixed(1)} KB</td>
-                          <td style={{ fontSize: '0.75rem' }}>{doc.uploaded_by_name || '—'}</td>
-                          <td style={{ fontSize: '0.75rem' }}>{doc.created_at}</td>
-                          <td>
-                            <a
-                              href={`${import.meta.env.VITE_API_URL || 'http://localhost:3001/api'}/patrocinios/${detail.id}/documents/${doc.id}/download`}
-                              className="btn-sm"
-                              style={{ textDecoration: 'none', display: 'inline-block' }}
-                              download
-                            >Descargar</a>
-                            <button className="btn-sm btn-danger" onClick={() => handleDeleteDoc(doc.id)} style={{ marginLeft: '0.25rem' }}>✕</button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                ) : (
-                  <p style={{ color: 'var(--text-light)', fontStyle: 'italic' }}>Sin documentos adjuntos</p>
-                )}
-
-                {/* ── Tasks ── */}
-                <h3 style={{ marginTop: '1.5rem' }}>Tareas vinculadas</h3>
-                <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-                  <input
-                    placeholder="Nueva tarea..."
-                    value={newTask.title}
-                    onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                    style={{ flex: 1, minWidth: '200px' }}
-                  />
-                  <select value={newTask.priority} onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}>
-                    <option value="medium">Media</option>
-                    <option value="high">Alta</option>
-                    <option value="urgent">Urgente</option>
-                    <option value="low">Baja</option>
-                  </select>
-                  <select value={newTask.assigned_to} onChange={(e) => setNewTask({ ...newTask, assigned_to: e.target.value })}>
-                    <option value="">Asignar a...</option>
-                    {users.map((u) => (
-                      <option key={u.id} value={u.id}>{u.name}</option>
-                    ))}
-                  </select>
-                  <button className="btn" onClick={handleCreateTask} disabled={!newTask.title.trim()}>Agregar</button>
-                </div>
-                {detail.tasks && detail.tasks.length > 0 ? (
-                  <table>
-                    <thead>
-                      <tr>
-                        <th>Título</th>
-                        <th>Estado</th>
-                        <th>Prioridad</th>
-                        <th>Asignado</th>
-                        <th>Fecha límite</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {detail.tasks.map((t) => (
-                        <tr key={t.id}>
-                          <td>{t.title}</td>
-                          <td><span className={`status-badge ${t.status}`}>{t.status}</span></td>
-                          <td><span className={`priority-badge ${t.priority}`}>{t.priority}</span></td>
-                          <td>{t.assigned_name || '—'}</td>
-                          <td>{t.due_date || '—'}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                ) : (
-                  <p style={{ color: 'var(--text-light)', fontStyle: 'italic' }}>Sin tareas vinculadas</p>
-                )}
-              </>
-            ) : (
-              <p style={{ textAlign: 'center', padding: '2rem', color: 'var(--danger)' }}>Error al cargar detalle</p>
-            )}
+      {showCreateModal && (
+        <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
+          <div className="modal large-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '800px', maxHeight: '85vh', overflowY: 'auto' }}>
+            <h2>{editingPatrocinio ? 'Editar Patrocinio' : 'Nuevo Patrocinio'}</h2>
+            {error && <div className="error-msg">{error}</div>}
+            
+            <div className="form-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>Empresa *</label>
+                <input placeholder="Nombre de la empresa" value={formData.company_name} onChange={e => setFormData({ ...formData, company_name: e.target.value })} required />
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>Contacto</label>
+                <input placeholder="Persona de contacto" value={formData.contact_person} onChange={e => setFormData({ ...formData, contact_person: e.target.value })} />
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>Teléfono</label>
+                <input placeholder="Teléfono" value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>Tipo</label>
+                <select value={formData.sponsorship_type} onChange={e => setFormData({ ...formData, sponsorship_type: e.target.value })}>
+                  <option value="">— Seleccionar —</option>
+                  <option value="Monetario">Monetario</option>
+                  <option value="Especie">Especie</option>
+                  <option value="Especie/Monetario">Especie/Monetario</option>
+                  <option value="Pendiente">Pendiente</option>
+                </select>
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>Estatus</label>
+                <select value={formData.sponsor_status_id || ''} onChange={e => setFormData({ ...formData, sponsor_status_id: e.target.value })}>
+                  <option value="">— Sin estatus —</option>
+                  {sponsorStatuses.map(s => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+              
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>Paquete</label>
+                <select value={formData.package} onChange={e => setFormData({ ...formData, package: e.target.value })}>
+                  <option value="">— Seleccionar paquete —</option>
+                  {packages.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
+                </select>
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>Estado de Visita</label>
+                <select value={formData.visit_status} onChange={e => setFormData({ ...formData, visit_status: e.target.value })}>
+                  <option value="">— Seleccionar —</option>
+                  <option value="Visitado">Visitado</option>
+                  <option value="En linea">En línea</option>
+                  <option value="Visita pendiente">Visita pendiente</option>
+                  <option value="Visita agendada">Visita agendada</option>
+                  <option value="No quiso">No quiso</option>
+                </select>
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>Estado de Pago</label>
+                <select value={formData.payment_status} onChange={e => setFormData({ ...formData, payment_status: e.target.value })}>
+                  <option value="">— Seleccionar —</option>
+                  <option value="Pagado">Pagado</option>
+                  <option value="Pendiente">Pendiente</option>
+                  <option value="Abonado">Abonado</option>
+                  <option value="Cancelado">Cancelado</option>
+                </select>
+              </div>
+              
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>Notas</label>
+                <textarea placeholder="Observaciones generales..." value={formData.notes} onChange={e => setFormData({ ...formData, notes: e.target.value })} rows="3" />
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
+              <button className="btn primary" onClick={handleSubmit}>{editingPatrocinio ? 'Actualizar' : 'Crear'}</button>
+              <button className="btn" onClick={() => setShowCreateModal(false)}>Cancelar</button>
+            </div>
           </div>
         </div>
       )}

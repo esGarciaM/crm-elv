@@ -71,13 +71,18 @@ router.get('/', authMiddleware, (req, res) => {
   const limit = parseInt(req.query.limit) || 50;
   const offset = (page - 1) * limit;
   const search = req.query.search || '';
+  const sponsor_status_id = req.query.sponsor_status_id;
 
-  let where = '';
+  let where = 'WHERE 1=1';
   const params = [];
   if (search) {
-    where = 'WHERE (p.company_name LIKE ? OR p.contact_person LIKE ? OR p.student_obtained LIKE ?)';
+    where += ' AND (p.company_name LIKE ? OR p.contact_person LIKE ? OR p.student_obtained LIKE ?)';
     const s = `%${search}%`;
     params.push(s, s, s);
+  }
+  if (sponsor_status_id) {
+    where += ' AND p.sponsor_status_id = ?';
+    params.push(sponsor_status_id);
   }
 
   const total = db.prepare(`SELECT COUNT(*) as count FROM patrocinios p ${where}`).get(...params).count;
@@ -85,17 +90,35 @@ router.get('/', authMiddleware, (req, res) => {
     SELECT p.*, 
       creator.name AS created_by_name,
       editor.name AS updated_by_name,
+      ss.name AS sponsor_status_name,
       (SELECT COUNT(*) FROM package_checklist pc2 JOIN packages pk2 ON pk2.id = pc2.package_id WHERE pk2.name = p.package) AS checklist_total,
       (SELECT COUNT(*) FROM patrocinio_checklist ptcl2 WHERE ptcl2.patrocinio_id = p.id AND ptcl2.completed = 1) AS checklist_completed
     FROM patrocinios p
     LEFT JOIN users creator ON creator.id = p.created_by
     LEFT JOIN users editor ON editor.id = p.updated_by
+    LEFT JOIN sponsor_statuses ss ON ss.id = p.sponsor_status_id
     ${where}
     ORDER BY p.company_name
     LIMIT ? OFFSET ?
   `).all(...params, limit, offset);
 
   res.json({ patrocinios, total, page, totalPages: Math.ceil(total / limit) });
+});
+
+// ─── GET /kanban — Datos para tablero Kanban ─────────────────
+router.get('/kanban', authMiddleware, (req, res) => {
+  const statuses = db.prepare('SELECT * FROM sponsor_statuses ORDER BY sort_order ASC').all();
+  const patrocinios = db.prepare(`
+    SELECT p.id, p.company_name, p.contact_person, p.phone, p.package, p.sponsorship_type, p.sponsor_status_id, p.payment_status
+    FROM patrocinios p
+  `).all();
+
+  const result = statuses.map(s => ({
+    ...s,
+    patrocinios: patrocinios.filter(p => p.sponsor_status_id === s.id)
+  }));
+
+  res.json(result);
 });
 
 // ─── GET /stats — Estadísticas de patrocinios ───────────────
@@ -130,10 +153,10 @@ router.get('/stats', authMiddleware, (req, res) => {
       inKindCount++;
       inKindEstimated += amt;
     }
-    const status = c.payment_status || 'Pendiente';
-    if (status === 'Pagado') totalPagado += amt;
-    else if (status === 'Pendiente') totalPendiente += amt;
-    else if (status === 'Abonado') totalAbonado += amt;
+    const st = c.payment_status || 'Pendiente';
+    if (st === 'Pagado') totalPagado += amt;
+    else if (st === 'Pendiente') totalPendiente += amt;
+    else if (st === 'Abonado') totalAbonado += amt;
   }
 
   res.json({
@@ -149,6 +172,21 @@ router.get('/stats', authMiddleware, (req, res) => {
     inKindCount,
     inKindEstimated
   });
+});
+
+// ─── PUT /kanban/status — Actualizar status de patrocinio (Drag & Drop) ──
+router.put('/kanban/status', authMiddleware, (req, res) => {
+  const { patrocinio_id, sponsor_status_id } = req.body;
+  if (!patrocinio_id || !sponsor_status_id) return res.status(400).json({ error: 'patrocinio_id y sponsor_status_id requeridos' });
+
+  const patrocinio = db.prepare('SELECT id FROM patrocinios WHERE id = ?').get(patrocinio_id);
+  if (!patrocinio) return res.status(404).json({ error: 'Patrocinio no encontrado' });
+
+  const status = db.prepare('SELECT id FROM sponsor_statuses WHERE id = ?').get(sponsor_status_id);
+  if (!status) return res.status(404).json({ error: 'Status no encontrado' });
+
+  db.prepare("UPDATE patrocinios SET sponsor_status_id = ?, updated_at = datetime('now','localtime'), updated_by = ? WHERE id = ?").run(sponsor_status_id, req.user.id, patrocinio_id);
+  res.json({ message: 'Status actualizado' });
 });
 
 // ─── GET /:id — Detalle completo (con documentos y tareas) ──
@@ -217,7 +255,7 @@ router.put('/:id', authMiddleware, (req, res) => {
     'company_name', 'contact_person', 'phone', 'sponsorship_type', 'package',
     'visit_status', 'payment_status', 'student_obtained', 'student_contacted',
     'in_kind_detail', 'payment_detail', 'social_media_fulfilled', 'tickets_delivered',
-    'logo_requested', 'notes'
+    'logo_requested', 'notes', 'sponsor_status_id'
   ];
 
   const updates = [];
