@@ -44,7 +44,7 @@ export default function Communications() {
     }
   };
 
-  const statusColors = { asignado: '#6b7280', en_redaccion: '#f59e0b', en_revision: '#3b82f6', aprobado: '#10b981', entregado: '#6366f1' };
+  const statusColors = { asignado: 'var(--text-light)', en_redaccion: 'var(--warning)', en_revision: 'var(--info)', aprobado: 'var(--success)', entregado: 'var(--accent)' };
   const priorityLabels = { alta: 'Alta', media: 'Media', baja: 'Baja' };
   const statusLabels = { asignado: 'Asignado', en_redaccion: 'En Redacción', en_revision: 'En Revisión', aprobado: 'Aprobado', entregado: 'Entregado' };
 
@@ -97,7 +97,7 @@ export default function Communications() {
               <div style={{ flex: '1 1 250px' }}>
                 <div className="cards-row">
                   {stats.byType.map(t => (
-                    <div key={t.name || 'Sin tipo'} className="card stat-card" style={{ borderTop: '3px solid #8b5cf6', minWidth: 0 }}>
+                    <div key={t.name || 'Sin tipo'} className="card stat-card" style={{ borderTop: '3px solid var(--accent)', minWidth: 0 }}>
                       <div className="stat-value">{t.count}</div>
                       <div className="stat-label">{t.name || 'Sin tipo'}</div>
                     </div>

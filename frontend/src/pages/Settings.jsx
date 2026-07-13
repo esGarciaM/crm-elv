@@ -18,6 +18,12 @@ export default function Settings() {
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState('');
 
+  // Backup state
+  const [backups, setBackups] = useState([]);
+  const [backupLoading, setBackupLoading] = useState(false);
+  const [backupMessage, setBackupMessage] = useState('');
+  const [currentDb, setCurrentDb] = useState(null);
+
   // Checklist state (per-package component selector)
   const [checklistItems, setChecklistItems] = useState([]);
   const [checkedItems, setCheckedItems] = useState([]);
@@ -33,8 +39,18 @@ export default function Settings() {
   const loadEmps = () => api.get('/employees').then(r => setEmployees(r.data));
   const loadDocTypes = () => api.get('/document-types').then(r => setDocTypes(r.data));
   const loadPackages = () => api.get('/packages?all=true').then(r => setPackages(r.data));
+  const loadBackups = async () => {
+    try {
+      const r = await api.get('/backups');
+      setBackups(r.data.backups);
+      setCurrentDb(r.data.currentDb);
+    } catch (e) {
+      console.error('Error loading backups', e);
+    }
+  };
 
   useEffect(() => { loadDepts(); loadEmps(); loadDocTypes(); loadPackages(); }, []);
+  useEffect(() => { if (tab === 'backups') loadBackups(); }, [tab]);
 
   const loadClCatalog = () => api.get('/packages/checklist-items').then(r => setClCatalog(r.data));
 
@@ -211,6 +227,53 @@ export default function Settings() {
     }
   };
 
+  const createBackup = async () => {
+    setBackupLoading(true);
+    setBackupMessage('');
+    try {
+      const r = await api.post('/backups/create');
+      setBackupMessage(r.data.message);
+      loadBackups();
+    } catch (e) {
+      setBackupMessage(e.response?.data?.error || 'Error al crear backup');
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
+  const restoreBackup = async (filename) => {
+    if (!confirm(`¿Restaurar backup ${filename}?\n\nSe creará un backup de seguridad antes de restaurar.`)) return;
+    setBackupLoading(true);
+    setBackupMessage('');
+    try {
+      const r = await api.post(`/backups/${filename}/restore`);
+      setBackupMessage(r.data.message);
+      loadBackups();
+    } catch (e) {
+      setBackupMessage(e.response?.data?.error || 'Error al restaurar');
+    } finally {
+      setBackupLoading(false);
+    }
+  };
+
+  const deleteBackup = async (filename) => {
+    if (!confirm(`¿Eliminar backup ${filename}?`)) return;
+    try {
+      await api.delete(`/backups/${filename}`);
+      loadBackups();
+    } catch (e) {
+      setBackupMessage(e.response?.data?.error || 'Error al eliminar');
+    }
+  };
+
+  const downloadBackup = (filename) => {
+    const token = localStorage.getItem('crm_token');
+    const link = document.createElement('a');
+    link.href = `/api/backups/${filename}/download?token=${token}`;
+    link.download = filename;
+    link.click();
+  };
+
   return (
     <div>
       <div className="page-header">
@@ -223,6 +286,7 @@ export default function Settings() {
         <button className={`filter-btn ${tab === 'docTypes' ? 'active' : ''}`} onClick={() => setTab('docTypes')}>Tipos de Documento</button>
         <button className={`filter-btn ${tab === 'packages' ? 'active' : ''}`} onClick={() => setTab('packages')}>Paquetes</button>
         <button className={`filter-btn ${tab === 'checklist' ? 'active' : ''}`} onClick={() => setTab('checklist')}>Checklist</button>
+        <button className={`filter-btn ${tab === 'backups' ? 'active' : ''}`} onClick={() => setTab('backups')}>Backups</button>
       </div>
 
       {tab === 'departments' && (
@@ -340,6 +404,84 @@ export default function Settings() {
         </div>
       )}
 
+      {tab === 'backups' && (
+        <div className="card">
+          <div className="docs-header">
+            <h2>Respaldo de Base de Datos</h2>
+            <button className="btn primary" onClick={createBackup} disabled={backupLoading}>
+              {backupLoading ? 'Procesando...' : '+ Crear Backup'}
+            </button>
+          </div>
+
+          {backupMessage && (
+            <div style={{
+              padding: '0.75rem 1rem', borderRadius: '8px', marginBottom: '1rem',
+              background: backupMessage.includes('Error') ? 'var(--badge-danger-bg, #fef2f2)' : 'var(--badge-success-bg, #f0fdf4)',
+              color: backupMessage.includes('Error') ? 'var(--danger)' : 'var(--success)',
+              fontSize: '0.85rem', fontWeight: 500
+            }}>
+              {backupMessage}
+            </div>
+          )}
+
+          {currentDb && (
+            <div style={{
+              display: 'flex', gap: '1.5rem', padding: '0.75rem 1rem', borderRadius: '8px',
+              background: 'var(--bg-secondary)', border: '1px solid var(--border)', marginBottom: '1.25rem',
+              fontSize: '0.82rem', color: 'var(--text-light)'
+            }}>
+              <span><strong>DB actual:</strong> {currentDb.sizeHuman}</span>
+              <span><strong>Ultima modificacion:</strong> {new Date(currentDb.modified).toLocaleString('es-MX')}</span>
+              <span><strong>Backups disponibles:</strong> {backups.length}</span>
+            </div>
+          )}
+
+          <table>
+            <thead>
+              <tr>
+                <th>Archivo</th>
+                <th>Fecha</th>
+                <th>Tamano</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              {backups.map(b => (
+                <tr key={b.filename}>
+                  <td>
+                    <code style={{ fontSize: '0.8rem' }}>{b.filename}</code>
+                  </td>
+                  <td>{new Date(b.date).toLocaleString('es-MX')}</td>
+                  <td>{b.sizeHuman}</td>
+                  <td>
+                    <button className="btn small" onClick={() => restoreBackup(b.filename)} disabled={backupLoading}
+                      title="Restaurar este backup">
+                      Restaurar
+                    </button>
+                    <button className="btn small" style={{ marginLeft: '.35rem' }} onClick={() => downloadBackup(b.filename)}
+                      title="Descargar backup">
+                      Descargar
+                    </button>
+                    <button className="btn small danger" style={{ marginLeft: '.35rem' }} onClick={() => deleteBackup(b.filename)}
+                      title="Eliminar backup">
+                      Eliminar
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {backups.length === 0 && (
+                <tr><td colSpan="4" className="empty-state">Sin backups disponibles</td></tr>
+              )}
+            </tbody>
+          </table>
+
+          <div style={{ marginTop: '1rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+            Los backups se realizan automaticamente cada 60 minutos. Se conservan los ultimos 30 respaldos.
+            La restauracion crea un backup de seguridad automatico antes de sobreescribir.
+          </div>
+        </div>
+      )}
+
       {showPkgModal && (
         <div className="modal-overlay" onClick={() => setShowPkgModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()}>
@@ -365,7 +507,7 @@ export default function Settings() {
         <div className="modal-overlay" onClick={() => setShowChecklistModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
             <h2>Componentes: {checklistPkg.name}</h2>
-            <p style={{ color: '#64748b', fontSize: '.85rem', marginBottom: '1rem' }}>
+            <p style={{ color: 'var(--text-light)', fontSize: '.85rem', marginBottom: '1rem' }}>
               Selecciona los elementos de seguimiento que aplican para este paquete
             </p>
             {error && <div className="error-msg">{error}</div>}
@@ -374,7 +516,7 @@ export default function Settings() {
                 <label key={item.id} style={{
                   display: 'flex', alignItems: 'center', gap: '.75rem',
                   padding: '.5rem .75rem', borderRadius: 'var(--radius)',
-                  background: checkedItems.includes(item.id) ? '#f0fdf4' : '#f8fafc',
+                  background: checkedItems.includes(item.id) ? 'var(--success-subtle)' : 'var(--bg-secondary)',
                   border: `1px solid ${checkedItems.includes(item.id) ? 'var(--success)' : 'var(--border)'}`,
                   cursor: 'pointer', transition: 'all .15s ease'
                 }}>

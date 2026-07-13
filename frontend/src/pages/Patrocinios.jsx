@@ -211,12 +211,12 @@ export default function Patrocinios() {
             <span className="stat-num">{fmt(stats.totalAbonado)}</span>
             <span className="stat-label">Abonado Parcial</span>
           </div>
-          <div className="stat-card" style={{ borderLeftColor: '#8b5cf6' }}>
+          <div className="stat-card" style={{ borderLeftColor: 'var(--accent)' }}>
             <span className="stat-num">{stats.inKindCount}</span>
             <span className="stat-label">En Especie</span>
             <span className="stat-sub">{fmt(stats.inKindEstimated)} estimado</span>
           </div>
-          <div className="stat-card" style={{ borderLeftColor: '#f59e0b' }}>
+          <div className="stat-card" style={{ borderLeftColor: 'var(--warning)' }}>
             <span className="stat-num">{fmt(stats.totalEstimated)}</span>
             <span className="stat-label">Meta Total</span>
           </div>
@@ -239,7 +239,7 @@ export default function Patrocinios() {
 
             {formErrors.length > 0 && (
               <div className="form-errors">
-                {formErrors.map((e, i) => <p key={i} style={{ color: '#dc2626', margin: '2px 0' }}>⚠ {e}</p>)}
+                {formErrors.map((e, i) => <p key={i} style={{ color: 'var(--danger)', margin: '2px 0' }}>⚠ {e}</p>)}
               </div>
             )}
 
@@ -338,19 +338,19 @@ export default function Patrocinios() {
                 <td>{p.student_contacted || '-'}</td>
                 <td><span className={`status-badge ${statusColor(p.social_media_fulfilled)}`}>{p.social_media_fulfilled || '-'}</span></td>
                 <td><span className={`status-badge ${statusColor(p.tickets_delivered)}`}>{p.tickets_delivered || '-'}</span></td>
-                <td style={{ fontSize: '0.8rem', color: '#94a3b8' }}>{p.created_by_name || '—'}</td>
+                <td style={{ fontSize: '0.8rem', color: 'var(--text-light)' }}>{p.created_by_name || '—'}</td>
                 <td style={{ minWidth: '100px' }}>
                   {p.checklist_total > 0 ? (
                     <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
                       <div className="mini-progress-track">
                         <div className="mini-progress-fill" style={{ width: `${Math.round((p.checklist_completed / p.checklist_total) * 100)}%` }} />
                       </div>
-                      <span style={{ fontSize: '0.78rem', fontWeight: 600, color: p.checklist_completed === p.checklist_total ? '#16a34a' : '#64748b', whiteSpace: 'nowrap' }}>
+                      <span style={{ fontSize: '0.78rem', fontWeight: 600, color: p.checklist_completed === p.checklist_total ? 'var(--success)' : 'var(--text-muted)', whiteSpace: 'nowrap' }}>
                         {Math.round((p.checklist_completed / p.checklist_total) * 100)}%
                       </span>
                     </div>
                   ) : (
-                    <span style={{ fontSize: '0.75rem', color: '#cbd5e1' }}>—</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>—</span>
                   )}
                 </td>
                 <td className="actions-cell" onClick={(e) => e.stopPropagation()}>
@@ -379,7 +379,7 @@ export default function Patrocinios() {
               </tr>
             ))}
             {patrocinios.length === 0 && (
-              <tr><td colSpan="14" style={{ textAlign: 'center', color: '#94a3b8', padding: '2rem' }}>Sin patrocinios registrados</td></tr>
+              <tr><td colSpan="14" style={{ textAlign: 'center', color: 'var(--text-light)', padding: '2rem' }}>Sin patrocinios registrados</td></tr>
             )}
           </tbody>
         </table>
@@ -410,24 +410,24 @@ export default function Patrocinios() {
 
                 {/* Info Grid */}
                 <div className="form-grid" style={{ marginBottom: '1.5rem' }}>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: '#64748b', fontSize: '0.75rem' }}>CONTACTO</label>{detail.contact_person || '—'}</div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: '#64748b', fontSize: '0.75rem' }}>TELÉFONO</label>{detail.phone || '—'}</div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: '#64748b', fontSize: '0.75rem' }}>TIPO</label><span className={`status-badge ${statusColor(detail.sponsorship_type)}`}>{detail.sponsorship_type || '—'}</span></div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: '#64748b', fontSize: '0.75rem' }}>PAQUETE</label>{detail.package || '—'}</div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: '#64748b', fontSize: '0.75rem' }}>VISITA</label><span className={`status-badge ${statusColor(detail.visit_status)}`}>{detail.visit_status || '—'}</span></div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: '#64748b', fontSize: '0.75rem' }}>PAGO</label><span className={`status-badge ${statusColor(detail.payment_status)}`}>{detail.payment_status || '—'}</span></div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: '#64748b', fontSize: '0.75rem' }}>ALUMNO QUE LO CONSIGUIÓ</label>{detail.student_obtained || '—'}</div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: '#64748b', fontSize: '0.75rem' }}>ALUMNO QUE SE COMUNICÓ</label>{detail.student_contacted || '—'}</div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: '#64748b', fontSize: '0.75rem' }}>REDES SOCIALES</label>{detail.social_media_fulfilled || '—'}</div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: '#64748b', fontSize: '0.75rem' }}>BOLETOS</label>{detail.tickets_delivered || '—'}</div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: '#64748b', fontSize: '0.75rem' }}>LOGO</label>{detail.logo_requested || '—'}</div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: '#64748b', fontSize: '0.75rem' }}>DETALLE ESPECIE</label>{detail.in_kind_detail || '—'}</div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: '#64748b', fontSize: '0.75rem' }}>DETALLE PAGO</label>{detail.payment_detail || '—'}</div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: '#64748b', fontSize: '0.75rem' }}>NOTAS</label>{detail.notes || '—'}</div>
+                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>CONTACTO</label>{detail.contact_person || '—'}</div>
+                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>TELÉFONO</label>{detail.phone || '—'}</div>
+                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>TIPO</label><span className={`status-badge ${statusColor(detail.sponsorship_type)}`}>{detail.sponsorship_type || '—'}</span></div>
+                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>PAQUETE</label>{detail.package || '—'}</div>
+                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>VISITA</label><span className={`status-badge ${statusColor(detail.visit_status)}`}>{detail.visit_status || '—'}</span></div>
+                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>PAGO</label><span className={`status-badge ${statusColor(detail.payment_status)}`}>{detail.payment_status || '—'}</span></div>
+                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>ALUMNO QUE LO CONSIGUIÓ</label>{detail.student_obtained || '—'}</div>
+                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>ALUMNO QUE SE COMUNICÓ</label>{detail.student_contacted || '—'}</div>
+                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>REDES SOCIALES</label>{detail.social_media_fulfilled || '—'}</div>
+                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>BOLETOS</label>{detail.tickets_delivered || '—'}</div>
+                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>LOGO</label>{detail.logo_requested || '—'}</div>
+                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>DETALLE ESPECIE</label>{detail.in_kind_detail || '—'}</div>
+                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>DETALLE PAGO</label>{detail.payment_detail || '—'}</div>
+                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>NOTAS</label>{detail.notes || '—'}</div>
                 </div>
 
                 {/* Audit info */}
-                <div style={{ fontSize: '0.75rem', color: '#94a3b8', marginBottom: '1.5rem', padding: '0.5rem', background: '#f8fafc', borderRadius: '6px' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-light)', marginBottom: '1.5rem', padding: '0.5rem', background: 'var(--bg-secondary)', borderRadius: '6px' }}>
                   <strong>Creado por:</strong> {detail.created_by_name || '—'} ·{' '}
                   <strong>Fecha:</strong> {detail.created_at || '—'}
                   {detail.updated_by_name && (
@@ -444,7 +444,7 @@ export default function Patrocinios() {
                     disabled={uploading}
                     style={{ fontSize: '0.85rem' }}
                   />
-                  {uploading && <span style={{ marginLeft: '0.5rem', color: '#64748b' }}>Subiendo...</span>}
+                  {uploading && <span style={{ marginLeft: '0.5rem', color: 'var(--text-muted)' }}>Subiendo...</span>}
                 </div>
                 {detail.documents && detail.documents.length > 0 ? (
                   <table>
@@ -480,7 +480,7 @@ export default function Patrocinios() {
                     </tbody>
                   </table>
                 ) : (
-                  <p style={{ color: '#94a3b8', fontStyle: 'italic' }}>Sin documentos adjuntos</p>
+                  <p style={{ color: 'var(--text-light)', fontStyle: 'italic' }}>Sin documentos adjuntos</p>
                 )}
 
                 {/* ── Tasks ── */}
@@ -530,11 +530,11 @@ export default function Patrocinios() {
                     </tbody>
                   </table>
                 ) : (
-                  <p style={{ color: '#94a3b8', fontStyle: 'italic' }}>Sin tareas vinculadas</p>
+                  <p style={{ color: 'var(--text-light)', fontStyle: 'italic' }}>Sin tareas vinculadas</p>
                 )}
               </>
             ) : (
-              <p style={{ textAlign: 'center', padding: '2rem', color: '#dc2626' }}>Error al cargar detalle</p>
+              <p style={{ textAlign: 'center', padding: '2rem', color: 'var(--danger)' }}>Error al cargar detalle</p>
             )}
           </div>
         </div>
