@@ -18,6 +18,7 @@ import disenoRoutes from './routes/disenos.js';
 import redesRoutes from './routes/redes.js';
 import logisticsRoutes from './routes/logistics.js';
 import audiovisualRoutes from './routes/audiovisual.js';
+import backupRoutes from './routes/backups.js';
 import { authMiddleware } from './middleware/auth.js';
 import db from './database.js';
 import bcrypt from 'bcryptjs';
@@ -54,6 +55,7 @@ app.use('/api/disenos', disenoRoutes);
 app.use('/api/redes', redesRoutes);
 app.use('/api/logistics', logisticsRoutes);
 app.use('/api/audiovisual', audiovisualRoutes);
+app.use('/api/backups', backupRoutes);
 
 // Simple endpoint to list active users for assignment dropdowns
 app.get('/api/users', authMiddleware, (req, res) => {

@@ -1,0 +1,27 @@
+# Environment variables (contains secrets)
+.env
+
+# Dependencies
+node_modules/
+
+# Build outputs
+dist/
+build/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+
+# Uploads
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Database backups
+backup_data/
+
+# Docker volumes
+*.log

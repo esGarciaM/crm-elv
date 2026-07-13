@@ -4,9 +4,11 @@ services:
     volumes:
       - backend_uploads:/app/uploads
       - backend_db:/app/data
+      - backup_data:/app/backups
     environment:
       - PORT=3001
       - DB_PATH=/app/data/crm.db
+      - BACKUP_DIR=/app/backups
     restart: unless-stopped
     expose:
       - 3001
@@ -28,6 +30,47 @@ services:
     expose:
       - 80
 
+  backup:
+    build: ./backup
+    volumes:
+      - backend_db:/app/data:ro
+      - backup_data:/app/backups
+    environment:
+      - DB_SOURCE=/app/data/crm.db
+      - BACKUP_DIR=/app/backups
+      - BACKUP_INTERVAL=60
+      - BACKUP_RETENTION=30
+      - WEB_PORT=8080
+      - TZ=America/Mexico_City
+    restart: unless-stopped
+    expose:
+      - 8080
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+
+  dbmanager:
+    build: ./nginx-dbmanager
+    ports:
+      - "9090:8080"
+    environment:
+      - NGINX_BASIC_AUTH_USER=${NGINX_BASIC_AUTH_USER:-admin}
+      - NGINX_BASIC_AUTH_PASSWORD=${NGINX_BASIC_AUTH_PASSWORD:-admin123}
+    depends_on:
+      - backup
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8080/health"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+
 volumes:
   backend_uploads:
   backend_db:
+  backup_data:
