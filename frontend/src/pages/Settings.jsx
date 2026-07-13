@@ -365,7 +365,7 @@ export default function Settings() {
         <div className="modal-overlay" onClick={() => setShowChecklistModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
             <h2>Componentes: {checklistPkg.name}</h2>
-            <p style={{ color: '#64748b', fontSize: '.85rem', marginBottom: '1rem' }}>
+            <p style={{ color: 'var(--text-light)', fontSize: '.85rem', marginBottom: '1rem' }}>
               Selecciona los elementos de seguimiento que aplican para este paquete
             </p>
             {error && <div className="error-msg">{error}</div>}
@@ -374,7 +374,7 @@ export default function Settings() {
                 <label key={item.id} style={{
                   display: 'flex', alignItems: 'center', gap: '.75rem',
                   padding: '.5rem .75rem', borderRadius: 'var(--radius)',
-                  background: checkedItems.includes(item.id) ? '#f0fdf4' : '#f8fafc',
+                  background: checkedItems.includes(item.id) ? 'var(--success-subtle)' : 'var(--bg-secondary)',
                   border: `1px solid ${checkedItems.includes(item.id) ? 'var(--success)' : 'var(--border)'}`,
                   cursor: 'pointer', transition: 'all .15s ease'
                 }}>

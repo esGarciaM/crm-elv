@@ -204,7 +204,7 @@ export default function Disenos() {
         <select
           value={filterStatus}
           onChange={(e) => { setFilterStatus(e.target.value); setPage(1); }}
-          style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}
+          style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)' }}
         >
           <option value="">Todos los Status</option>
           <option>PENDIENTE</option>
@@ -216,7 +216,7 @@ export default function Disenos() {
         <select
           value={filterPrioridad}
           onChange={(e) => { setFilterPrioridad(e.target.value); setPage(1); }}
-          style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}
+          style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)' }}
         >
           <option value="">Todas las Prioridades</option>
           <option>MAXIMA</option>
@@ -234,7 +234,7 @@ export default function Disenos() {
 
             {formErrors.length > 0 && (
               <div className="form-errors">
-                {formErrors.map((e, i) => <p key={i} style={{ color: '#dc2626', margin: '2px 0' }}>⚠ {e}</p>)}
+                {formErrors.map((e, i) => <p key={i} style={{ color: 'var(--danger)', margin: '2px 0' }}>⚠ {e}</p>)}
               </div>
             )}
 
@@ -267,7 +267,7 @@ export default function Disenos() {
                 onChange={(e) => set('responsable_diseno', e.target.value)}
               />
               <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', marginBottom: '2px' }}>Fecha Inicio</label>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '2px' }}>Fecha Inicio</label>
                 <input
                   type="date"
                   value={form.fecha_inicio || ''}
@@ -276,7 +276,7 @@ export default function Disenos() {
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', marginBottom: '2px' }}>Fecha Vencimiento</label>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '2px' }}>Fecha Vencimiento</label>
                 <input
                   type="date"
                   value={form.fecha_vencimiento || ''}
@@ -306,7 +306,7 @@ export default function Disenos() {
                 onChange={(e) => set('costo', e.target.value)}
               />
               <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', marginBottom: '2px' }}>Liquidado (0-1)</label>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '2px' }}>Liquidado (0-1)</label>
                 <input
                   type="number"
                   step="0.01"
@@ -325,7 +325,7 @@ export default function Disenos() {
                 style={{ gridColumn: 'span 2' }}
               />
               <div style={{ gridColumn: 'span 2' }}>
-                <label style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', marginBottom: '4px' }}>Vincular a Patrocinio</label>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Vincular a Patrocinio</label>
                 <select
                   value={form.patrocinio_id || ''}
                   onChange={(e) => set('patrocinio_id', e.target.value || null)}
@@ -394,7 +394,7 @@ export default function Disenos() {
                 </td>
                 <td style={{ fontSize: '0.78rem', maxWidth: '150px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{d.comites_involucrados || '-'}</td>
                 <td><span className={`status-badge ${statusColor(d.status)}`}>{d.status || '-'}</span></td>
-                <td style={{ fontSize: '0.78rem' }}>{d.patrocinio_empresa || <span style={{ color: '#cbd5e1' }}>—</span>}</td>
+                <td style={{ fontSize: '0.78rem' }}>{d.patrocinio_empresa || <span style={{ color: 'var(--text-muted)' }}>—</span>}</td>
                 <td className="actions-cell" onClick={(e) => e.stopPropagation()}>
                   <button className="icon-btn edit" title="Editar" onClick={() => handleEdit(d)}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -414,7 +414,7 @@ export default function Disenos() {
               </tr>
             ))}
             {disenos.length === 0 && (
-              <tr><td colSpan="14" style={{ textAlign: 'center', color: '#94a3b8', padding: '2rem' }}>Sin diseños registrados</td></tr>
+              <tr><td colSpan="14" style={{ textAlign: 'center', color: 'var(--text-light)', padding: '2rem' }}>Sin diseños registrados</td></tr>
             )}
           </tbody>
         </table>
@@ -442,24 +442,24 @@ export default function Disenos() {
                 </div>
 
                 <div className="form-grid" style={{ marginBottom: '1.5rem' }}>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: '#64748b', fontSize: '0.75rem' }}>N. ORDEN</label>{detail.n_orden || '—'}</div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: '#64748b', fontSize: '0.75rem' }}>N. PAQUETE</label>{detail.n_paquete || '—'}</div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: '#64748b', fontSize: '0.75rem' }}>RESP. PATROCINIO</label>{detail.responsable_patrocinio || '—'}</div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: '#64748b', fontSize: '0.75rem' }}>RESP. DISEÑO</label>{detail.responsable_diseno || '—'}</div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: '#64748b', fontSize: '0.75rem' }}>FECHA INICIO</label>{detail.fecha_inicio || '—'}</div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: '#64748b', fontSize: '0.75rem' }}>FECHA VENCIMIENTO</label>{detail.fecha_vencimiento || '—'}</div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: '#64748b', fontSize: '0.75rem' }}>PRIORIDAD</label><span className={`status-badge ${statusColor(detail.prioridad)}`}>{detail.prioridad || '—'}</span></div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: '#64748b', fontSize: '0.75rem' }}>STATUS</label><span className={`status-badge ${statusColor(detail.status)}`}>{detail.status || '—'}</span></div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: '#64748b', fontSize: '0.75rem' }}>COSTO</label>{fmt(detail.costo)}</div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: '#64748b', fontSize: '0.75rem' }}>LIQUIDADO</label><span className={`status-badge ${liquidadoBadge(detail.liquidado)}`}>{fmtPercent(detail.liquidado)}</span></div>
-                  <div style={{ gridColumn: 'span 2' }}><label style={{ fontWeight: 600, display: 'block', color: '#64748b', fontSize: '0.75rem' }}>COMITÉS INVOLUCRADOS</label>{detail.comites_involucrados || '—'}</div>
-                  <div style={{ gridColumn: 'span 2' }}><label style={{ fontWeight: 600, display: 'block', color: '#64748b', fontSize: '0.75rem' }}>COMENTARIOS</label>{detail.comentarios_extras || '—'}</div>
+                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>N. ORDEN</label>{detail.n_orden || '—'}</div>
+                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>N. PAQUETE</label>{detail.n_paquete || '—'}</div>
+                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>RESP. PATROCINIO</label>{detail.responsable_patrocinio || '—'}</div>
+                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>RESP. DISEÑO</label>{detail.responsable_diseno || '—'}</div>
+                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>FECHA INICIO</label>{detail.fecha_inicio || '—'}</div>
+                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>FECHA VENCIMIENTO</label>{detail.fecha_vencimiento || '—'}</div>
+                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>PRIORIDAD</label><span className={`status-badge ${statusColor(detail.prioridad)}`}>{detail.prioridad || '—'}</span></div>
+                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>STATUS</label><span className={`status-badge ${statusColor(detail.status)}`}>{detail.status || '—'}</span></div>
+                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>COSTO</label>{fmt(detail.costo)}</div>
+                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>LIQUIDADO</label><span className={`status-badge ${liquidadoBadge(detail.liquidado)}`}>{fmtPercent(detail.liquidado)}</span></div>
+                  <div style={{ gridColumn: 'span 2' }}><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>COMITÉS INVOLUCRADOS</label>{detail.comites_involucrados || '—'}</div>
+                  <div style={{ gridColumn: 'span 2' }}><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>COMENTARIOS</label>{detail.comentarios_extras || '—'}</div>
                 </div>
 
                 {/* Patrocinio vinculado */}
                 {detail.patrocinio_empresa && (
-                  <div style={{ padding: '0.75rem', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', marginBottom: '1.5rem' }}>
-                    <h4 style={{ margin: '0 0 0.5rem', color: '#0369a1' }}>Patrocinio Vinculado</h4>
+                  <div style={{ padding: '0.75rem', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '8px', marginBottom: '1.5rem' }}>
+                    <h4 style={{ margin: '0 0 0.5rem', color: 'var(--info)' }}>Patrocinio Vinculado</h4>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', fontSize: '0.85rem' }}>
                       <div><strong>Empresa:</strong> {detail.patrocinio_empresa}</div>
                       <div><strong>Contacto:</strong> {detail.patrocinio_contacto || '—'}</div>
@@ -471,7 +471,7 @@ export default function Disenos() {
                 )}
 
                 {/* Audit info */}
-                <div style={{ fontSize: '0.75rem', color: '#94a3b8', padding: '0.5rem', background: '#f8fafc', borderRadius: '6px' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-light)', padding: '0.5rem', background: 'var(--bg-secondary)', borderRadius: '6px' }}>
                   <strong>Creado por:</strong> {detail.created_by_name || '—'} ·{' '}
                   <strong>Fecha:</strong> {detail.created_at || '—'}
                   {detail.updated_by_name && (
@@ -480,7 +480,7 @@ export default function Disenos() {
                 </div>
               </>
             ) : (
-              <p style={{ textAlign: 'center', padding: '2rem', color: '#dc2626' }}>Error al cargar detalle</p>
+              <p style={{ textAlign: 'center', padding: '2rem', color: 'var(--danger)' }}>Error al cargar detalle</p>
             )}
           </div>
         </div>

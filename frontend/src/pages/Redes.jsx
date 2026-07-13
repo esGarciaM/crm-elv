@@ -162,11 +162,11 @@ export default function Redes() {
             <span className="stat-num">{stats.byEstado?.find(e => e.estado === 'incompleto')?.count || 0}</span>
             <span className="stat-label">Incompletos</span>
           </div>
-          <div className="stat-card" style={{ borderLeftColor: '#8b5cf6' }}>
+          <div className="stat-card" style={{ borderLeftColor: 'var(--accent)' }}>
             <span className="stat-num">{stats.byPost?.find(p => p.post_programados === 'SI')?.count || 0}</span>
             <span className="stat-label">Posts Programados</span>
           </div>
-          <div className="stat-card" style={{ borderLeftColor: '#06b6d4' }}>
+          <div className="stat-card" style={{ borderLeftColor: 'var(--info)' }}>
             <span className="stat-num">{stats.byReels?.find(r => r.reels === 'grabados')?.count || 0}</span>
             <span className="stat-label">Reels Grabados</span>
           </div>
@@ -182,19 +182,19 @@ export default function Redes() {
           onChange={(e) => { setSearch(e.target.value); setPage(1); }}
           style={{ flex: 1, minWidth: '250px' }}
         />
-        <select value={filterEstado} onChange={(e) => { setFilterEstado(e.target.value); setPage(1); }} style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+        <select value={filterEstado} onChange={(e) => { setFilterEstado(e.target.value); setPage(1); }} style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)' }}>
           <option value="">Todos los Estados</option>
           <option>completo</option>
           <option>en progreso</option>
           <option>incompleto</option>
         </select>
-        <select value={filterPost} onChange={(e) => { setFilterPost(e.target.value); setPage(1); }} style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+        <select value={filterPost} onChange={(e) => { setFilterPost(e.target.value); setPage(1); }} style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)' }}>
           <option value="">Todos los Posts</option>
           <option>SI</option>
           <option>No</option>
           <option>en diseño</option>
         </select>
-        <select value={filterReels} onChange={(e) => { setFilterReels(e.target.value); setPage(1); }} style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid #e2e8f0' }}>
+        <select value={filterReels} onChange={(e) => { setFilterReels(e.target.value); setPage(1); }} style={{ padding: '0.5rem', borderRadius: '6px', border: '1px solid var(--border)' }}>
           <option value="">Todos los Reels</option>
           <option>grabados</option>
           <option>editando</option>
@@ -211,7 +211,7 @@ export default function Redes() {
 
             {formErrors.length > 0 && (
               <div className="form-errors">
-                {formErrors.map((e, i) => <p key={i} style={{ color: '#dc2626', margin: '2px 0' }}>⚠ {e}</p>)}
+                {formErrors.map((e, i) => <p key={i} style={{ color: 'var(--danger)', margin: '2px 0' }}>⚠ {e}</p>)}
               </div>
             )}
 
@@ -221,11 +221,11 @@ export default function Redes() {
               <input placeholder="Responsable" value={form.responsable || ''} onChange={(e) => set('responsable', e.target.value)} />
               <input placeholder="Actividad" value={form.actividad || ''} onChange={(e) => set('actividad', e.target.value)} />
               <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', marginBottom: '2px' }}>Fecha Inicio</label>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '2px' }}>Fecha Inicio</label>
                 <input type="date" value={form.fecha_inicio || ''} onChange={(e) => set('fecha_inicio', e.target.value)} style={{ width: '100%' }} />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', marginBottom: '2px' }}>Fecha Límite</label>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '2px' }}>Fecha Límite</label>
                 <input type="date" value={form.fecha_limite || ''} onChange={(e) => set('fecha_limite', e.target.value)} style={{ width: '100%' }} />
               </div>
               <select value={form.estado || ''} onChange={(e) => set('estado', e.target.value)}>
@@ -248,7 +248,7 @@ export default function Redes() {
                 <option>no aplica</option>
               </select>
               <div style={{ gridColumn: 'span 2' }}>
-                <label style={{ display: 'block', fontSize: '0.75rem', color: '#64748b', marginBottom: '4px' }}>Vincular a Patrocinio</label>
+                <label style={{ display: 'block', fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '4px' }}>Vincular a Patrocinio</label>
                 <select value={form.patrocinio_id || ''} onChange={(e) => set('patrocinio_id', e.target.value || null)} style={{ width: '100%' }}>
                   <option value="">Sin vincular</option>
                   {patrocinios.map(p => (
@@ -298,7 +298,7 @@ export default function Redes() {
                 <td><span className={`status-badge ${estadoColor(item.estado)}`}>{item.estado || '-'}</span></td>
                 <td><span className={`status-badge ${postColor(item.post_programados)}`}>{item.post_programados || '-'}</span></td>
                 <td><span className={`status-badge ${reelsColor(item.reels)}`}>{item.reels || '-'}</span></td>
-                <td style={{ fontSize: '0.78rem' }}>{item.patrocinio_empresa || <span style={{ color: '#cbd5e1' }}>—</span>}</td>
+                <td style={{ fontSize: '0.78rem' }}>{item.patrocinio_empresa || <span style={{ color: 'var(--text-muted)' }}>—</span>}</td>
                 <td className="actions-cell" onClick={(e) => e.stopPropagation()}>
                   <button className="icon-btn edit" title="Editar" onClick={() => handleEdit(item)}>
                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -318,7 +318,7 @@ export default function Redes() {
               </tr>
             ))}
             {items.length === 0 && (
-              <tr><td colSpan="11" style={{ textAlign: 'center', color: '#94a3b8', padding: '2rem' }}>Sin registros de redes sociales</td></tr>
+              <tr><td colSpan="11" style={{ textAlign: 'center', color: 'var(--text-light)', padding: '2rem' }}>Sin registros de redes sociales</td></tr>
             )}
           </tbody>
         </table>
@@ -345,21 +345,21 @@ export default function Redes() {
                 </div>
 
                 <div className="form-grid" style={{ marginBottom: '1.5rem' }}>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: '#64748b', fontSize: '0.75rem' }}>FOLIO</label>{detail.folio || '—'}</div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: '#64748b', fontSize: '0.75rem' }}>EMPRESA / NOMBRE</label>{detail.empresa_nombre || '—'}</div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: '#64748b', fontSize: '0.75rem' }}>RESPONSABLE</label>{detail.responsable || '—'}</div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: '#64748b', fontSize: '0.75rem' }}>ACTIVIDAD</label>{detail.actividad || '—'}</div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: '#64748b', fontSize: '0.75rem' }}>FECHA INICIO</label>{detail.fecha_inicio || '—'}</div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: '#64748b', fontSize: '0.75rem' }}>FECHA LÍMITE</label>{detail.fecha_limite || '—'}</div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: '#64748b', fontSize: '0.75rem' }}>ESTADO</label><span className={`status-badge ${estadoColor(detail.estado)}`}>{detail.estado || '—'}</span></div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: '#64748b', fontSize: '0.75rem' }}>POST PROGRAMADOS</label><span className={`status-badge ${postColor(detail.post_programados)}`}>{detail.post_programados || '—'}</span></div>
-                  <div><label style={{ fontWeight: 600, display: 'block', color: '#64748b', fontSize: '0.75rem' }}>REELS</label><span className={`status-badge ${reelsColor(detail.reels)}`}>{detail.reels || '—'}</span></div>
-                  <div style={{ gridColumn: 'span 2' }}><label style={{ fontWeight: 600, display: 'block', color: '#64748b', fontSize: '0.75rem' }}>OBSERVACIONES</label>{detail.observaciones || '—'}</div>
+                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>FOLIO</label>{detail.folio || '—'}</div>
+                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>EMPRESA / NOMBRE</label>{detail.empresa_nombre || '—'}</div>
+                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>RESPONSABLE</label>{detail.responsable || '—'}</div>
+                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>ACTIVIDAD</label>{detail.actividad || '—'}</div>
+                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>FECHA INICIO</label>{detail.fecha_inicio || '—'}</div>
+                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>FECHA LÍMITE</label>{detail.fecha_limite || '—'}</div>
+                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>ESTADO</label><span className={`status-badge ${estadoColor(detail.estado)}`}>{detail.estado || '—'}</span></div>
+                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>POST PROGRAMADOS</label><span className={`status-badge ${postColor(detail.post_programados)}`}>{detail.post_programados || '—'}</span></div>
+                  <div><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>REELS</label><span className={`status-badge ${reelsColor(detail.reels)}`}>{detail.reels || '—'}</span></div>
+                  <div style={{ gridColumn: 'span 2' }}><label style={{ fontWeight: 600, display: 'block', color: 'var(--text-muted)', fontSize: '0.75rem' }}>OBSERVACIONES</label>{detail.observaciones || '—'}</div>
                 </div>
 
                 {detail.patrocinio_empresa && (
-                  <div style={{ padding: '0.75rem', background: '#f0f9ff', border: '1px solid #bae6fd', borderRadius: '8px', marginBottom: '1.5rem' }}>
-                    <h4 style={{ margin: '0 0 0.5rem', color: '#0369a1' }}>Patrocinio Vinculado</h4>
+                  <div style={{ padding: '0.75rem', background: 'var(--bg-secondary)', border: '1px solid var(--border)', borderRadius: '8px', marginBottom: '1.5rem' }}>
+                    <h4 style={{ margin: '0 0 0.5rem', color: 'var(--info)' }}>Patrocinio Vinculado</h4>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.5rem', fontSize: '0.85rem' }}>
                       <div><strong>Empresa:</strong> {detail.patrocinio_empresa}</div>
                       <div><strong>Contacto:</strong> {detail.patrocinio_contacto || '—'}</div>
@@ -368,7 +368,7 @@ export default function Redes() {
                   </div>
                 )}
 
-                <div style={{ fontSize: '0.75rem', color: '#94a3b8', padding: '0.5rem', background: '#f8fafc', borderRadius: '6px' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-light)', padding: '0.5rem', background: 'var(--bg-secondary)', borderRadius: '6px' }}>
                   <strong>Creado por:</strong> {detail.created_by_name || '—'} ·{' '}
                   <strong>Fecha:</strong> {detail.created_at || '—'}
                   {detail.updated_by_name && (
@@ -377,7 +377,7 @@ export default function Redes() {
                 </div>
               </>
             ) : (
-              <p style={{ textAlign: 'center', padding: '2rem', color: '#dc2626' }}>Error al cargar detalle</p>
+              <p style={{ textAlign: 'center', padding: '2rem', color: 'var(--danger)' }}>Error al cargar detalle</p>
             )}
           </div>
         </div>

@@ -1,9 +1,11 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useTheme } from '../context/ThemeContext';
 
 export default function Layout({ children }) {
   const { user, logout } = useAuth();
+  const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -41,6 +43,11 @@ export default function Layout({ children }) {
             </>
           )}
         </ul>
+        <div className="theme-switcher" role="radiogroup" aria-label="Seleccionar tema">
+          <button className={`theme-btn ${theme === 'light' ? 'active' : ''}`} onClick={() => setTheme('light')} role="radio" aria-checked={theme === 'light'}>Claro</button>
+          <button className={`theme-btn ${theme === 'dark' ? 'active' : ''}`} onClick={() => setTheme('dark')} role="radio" aria-checked={theme === 'dark'}>Oscuro</button>
+          <button className={`theme-btn ${theme === 'neon' ? 'active' : ''}`} onClick={() => setTheme('neon')} role="radio" aria-checked={theme === 'neon'}>Neón</button>
+        </div>
         <button className="logout-btn" onClick={handleLogout}>Cerrar Sesión</button>
       </nav>
 

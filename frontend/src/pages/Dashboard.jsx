@@ -90,18 +90,18 @@ export default function Dashboard() {
           <span className="stat-num">{stats.tasksCompleted}</span>
           <span className="stat-label">Completadas</span>
         </div>
-        <div className="stat-card" style={{ borderLeftColor: '#8b5cf6' }}>
+        <div className="stat-card" style={{ borderLeftColor: 'var(--accent)' }}>
           <span className="stat-num">{stats.completionRate}%</span>
           <span className="stat-label">Tasa de Finalización</span>
         </div>
         {stats.tasksUrgent > 0 && (
-          <div className="stat-card" style={{ borderLeftColor: '#dc2626' }}>
+          <div className="stat-card" style={{ borderLeftColor: 'var(--danger)' }}>
             <span className="stat-num">{stats.tasksUrgent}</span>
             <span className="stat-label">Urgentes</span>
           </div>
         )}
         {stats.tasksOverdue > 0 && (
-          <div className="stat-card" style={{ borderLeftColor: '#dc2626' }}>
+          <div className="stat-card" style={{ borderLeftColor: 'var(--danger)' }}>
             <span className="stat-num">{stats.tasksOverdue}</span>
             <span className="stat-label">Vencidas</span>
           </div>
@@ -134,7 +134,7 @@ export default function Dashboard() {
               </tr>
             ))}
             {(!stats.perUser || stats.perUser.length === 0) && (
-              <tr><td colSpan="6" style={{ textAlign: 'center', color: '#94a3b8' }}>Sin usuarios activos</td></tr>
+              <tr><td colSpan="6" style={{ textAlign: 'center', color: 'var(--text-light)' }}>Sin usuarios activos</td></tr>
             )}
           </tbody>
         </table>

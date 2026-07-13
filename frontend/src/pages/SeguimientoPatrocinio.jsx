@@ -122,7 +122,7 @@ export default function SeguimientoPatrocinio() {
         </button>
         <div style={{ flex: 1, marginLeft: '1rem' }}>
           <h1 style={{ margin: 0 }}>{patrocinio.company_name || 'Sin nombre'}</h1>
-          <p style={{ margin: '4px 0 0', color: '#64748b', fontSize: '0.85rem' }}>
+          <p style={{ margin: '4px 0 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
             {patrocinio.package ? `Paquete: ${patrocinio.package}` : 'Sin paquete asignado'}
             {' · '}
             {patrocinio.sponsorship_type || 'Sin tipo'}
@@ -148,7 +148,7 @@ export default function SeguimientoPatrocinio() {
           {items.length === 0 ? (
             <div className="seguimiento-empty">
               <p>No hay componentes configurados para este paquete.</p>
-              <p style={{ fontSize: '0.85rem', color: '#94a3b8' }}>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-light)' }}>
                 Ve a Configuración &gt; Paquetes y asigna componentes al paquete.
               </p>
             </div>
@@ -247,7 +247,7 @@ export default function SeguimientoPatrocinio() {
                     <div className="timeline-header">
                       <strong>
                         {c.deleted
-                          ? <span style={{ color: '#94a3b8' }}>Mensaje eliminado</span>
+                          ? <span style={{ color: 'var(--text-light)' }}>Mensaje eliminado</span>
                           : (c.created_by_name || 'Usuario')
                         }
                       </strong>
