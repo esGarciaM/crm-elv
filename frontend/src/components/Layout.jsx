@@ -33,6 +33,7 @@ export default function Layout({ children }) {
               <li><Link to="/disenos" onClick={() => setMenuOpen(false)}>Diseños</Link></li>
               <li><Link to="/redes" onClick={() => setMenuOpen(false)}>Redes</Link></li>
               <li><Link to="/logistica" onClick={() => setMenuOpen(false)}>Logistica</Link></li>
+              <li><Link to="/audiovisual" onClick={() => setMenuOpen(false)}>Audiovisual</Link></li>
               <li><Link to="/finance" onClick={() => setMenuOpen(false)}>Finanzas</Link></li>
               <li><Link to="/communications" onClick={() => setMenuOpen(false)}>Comunicaciones</Link></li>
               {user?.role === 'admin' && <li><Link to="/users" onClick={() => setMenuOpen(false)}>Usuarios</Link></li>}

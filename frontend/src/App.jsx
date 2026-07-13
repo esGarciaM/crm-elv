@@ -17,6 +17,7 @@ import ClientPortal from './pages/ClientPortal';
 import Disenos from './pages/Disenos';
 import Redes from './pages/Redes';
 import Logistica from './pages/Logistica';
+import Audiovisual from './pages/Audiovisual';
 
 function AppContent() {
   const { user, loading } = useAuth();
@@ -50,6 +51,7 @@ function AppContent() {
         <Route path="/disenos" element={<Disenos />} />
         <Route path="/redes" element={<Redes />} />
         <Route path="/logistica" element={<Logistica />} />
+        <Route path="/audiovisual" element={<Audiovisual />} />
         <Route path="/portal" element={<Navigate to="/" />} />
       </Routes>
     </Layout>
