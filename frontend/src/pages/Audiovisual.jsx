@@ -321,7 +321,7 @@ export default function Audiovisual() {
             </div>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+          <div className="dashboard-grid" style={{ marginBottom: '1.5rem' }}>
             <div style={{ background: 'var(--card)', borderRadius: '8px', padding: '1.5rem', border: '1px solid var(--border)' }}>
               <h3 style={{ marginBottom: '1rem', fontSize: '0.95rem' }}>Distribucion por Estatus</h3>
               {chartData.length > 0 ? (
@@ -405,7 +405,7 @@ export default function Audiovisual() {
               <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
             </div>
           ) : avDetail ? (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', alignItems: 'start' }}>
+            <div className="dashboard-grid" style={{ alignItems: 'start' }}>
 
               {/* ── Left: Info Card ── */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -797,7 +797,7 @@ export default function Audiovisual() {
             </div>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+          <div className="dashboard-grid" style={{ marginBottom: '1.5rem' }}>
             <div style={{ background: 'var(--card)', borderRadius: '8px', padding: '1.5rem', border: '1px solid var(--border)' }}>
               <h3 style={{ marginBottom: '1rem', fontSize: '0.95rem' }}>Eventos por Tipo</h3>
               {evChartData.length > 0 ? (
@@ -864,8 +864,8 @@ export default function Audiovisual() {
         <div>
           <button className="btn-sm" onClick={closeEvDetail} style={{ marginBottom: '1rem' }}>← Volver a la lista</button>
           {evDetailLoading ? <p style={{ textAlign: 'center', padding: '2rem' }}>Cargando...</p> : evDetail ? (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
-              {/* Left: Event Info */}
+            <div className="dashboard-grid">
+               {/* Left: Event Info */}
               <div style={{ background: 'var(--card)', borderRadius: '8px', padding: '1.5rem', border: '1px solid var(--border)' }}>
                 <h3 style={{ marginBottom: '1rem', fontSize: '1rem', textTransform: 'capitalize' }}>{evDetail.name}</h3>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem', fontSize: '0.85rem' }}>
@@ -935,7 +935,7 @@ export default function Audiovisual() {
             <button className="btn-sm" onClick={() => { if (calMonth === 12) { setCalMonth(1); setCalYear(calYear + 1); } else setCalMonth(calMonth + 1); }}>Siguiente →</button>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '1px', background: 'var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
+          <div className="calendar-grid">
             {['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'].map(d => (
               <div key={d} style={{ background: 'var(--bg-hover)', padding: '0.5rem', textAlign: 'center', fontWeight: 600, fontSize: '0.75rem', color: 'var(--text-light)' }}>{d}</div>
             ))}

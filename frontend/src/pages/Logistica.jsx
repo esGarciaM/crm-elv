@@ -380,7 +380,7 @@ export default function Logistica() {
             </div>
           )}
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+          <div className="dashboard-grid" style={{ marginBottom: '1.5rem' }}>
             {/* Activity Pie Chart */}
             <div style={{ background: 'var(--card)', borderRadius: '8px', padding: '1.5rem', border: '1px solid var(--border)' }}>
               <h3 style={{ marginBottom: '1rem', fontSize: '0.95rem', color: 'var(--text)' }}>Actividades por Estatus</h3>
@@ -414,7 +414,7 @@ export default function Logistica() {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+          <div className="dashboard-grid" style={{ marginBottom: '1.5rem' }}>
             {/* Upcoming Activities */}
             <div style={{ background: 'var(--card)', borderRadius: '8px', padding: '1.5rem', border: '1px solid var(--border)' }}>
               <h3 style={{ marginBottom: '1rem', fontSize: '0.95rem', color: 'var(--text)' }}>Proximas Actividades</h3>
@@ -463,7 +463,7 @@ export default function Logistica() {
           </div>
 
           {/* By Type + Flights by Destination */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+          <div className="dashboard-grid" style={{ marginBottom: '1.5rem' }}>
             {stats?.byType && (
               <div style={{ background: 'var(--card)', borderRadius: '8px', padding: '1.5rem', border: '1px solid var(--border)' }}>
                 <h3 style={{ marginBottom: '1rem', fontSize: '0.95rem', color: 'var(--text)' }}>Actividades por Tipo</h3>
@@ -642,7 +642,7 @@ export default function Logistica() {
             ))}
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '1px', background: 'var(--border)', borderRadius: '8px', overflow: 'hidden' }}>
+          <div className="calendar-grid">
             {['Dom', 'Lun', 'Mar', 'Mie', 'Jue', 'Vie', 'Sab'].map(d => (
               <div key={d} style={{ background: 'var(--bg-hover)', padding: '0.5rem', textAlign: 'center', fontWeight: 600, fontSize: '0.75rem', color: 'var(--text-light)' }}>{d}</div>
             ))}
