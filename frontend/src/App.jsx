@@ -16,6 +16,7 @@ import SeguimientoPatrocinio from './pages/SeguimientoPatrocinio';
 import ClientPortal from './pages/ClientPortal';
 import Disenos from './pages/Disenos';
 import Redes from './pages/Redes';
+import Logistica from './pages/Logistica';
 
 function AppContent() {
   const { user, loading } = useAuth();
@@ -48,6 +49,7 @@ function AppContent() {
         <Route path="/patrocinios/:id/seguimiento" element={<SeguimientoPatrocinio />} />
         <Route path="/disenos" element={<Disenos />} />
         <Route path="/redes" element={<Redes />} />
+        <Route path="/logistica" element={<Logistica />} />
         <Route path="/portal" element={<Navigate to="/" />} />
       </Routes>
     </Layout>
