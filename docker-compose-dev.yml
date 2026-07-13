@@ -40,7 +40,7 @@ services:
   backup:
     build: ./backup
     volumes:
-      - backend_db:/app/data:ro
+      - backend_db:/app/data
       - backup_data:/app/backups
     environment:
       - DB_SOURCE=/app/data/crm.db
