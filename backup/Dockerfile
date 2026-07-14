@@ -16,7 +16,7 @@ RUN chmod +x /app/backup.sh /app/entrypoint.sh
 # Default environment variables
 ENV DB_SOURCE=/app/data/crm.db \
     BACKUP_DIR=/app/backups \
-    BACKUP_INTERVAL=60 \
+    BACKUP_INTERVAL=480 \
     BACKUP_RETENTION=30 \
     WEB_PORT=8080 \
     TZ=America/Mexico_City

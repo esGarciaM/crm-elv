@@ -8,8 +8,16 @@ const TABS = [
   { key: 'sponsorStatuses', label: 'Estatus de Patrocinio' },
   { key: 'packages', label: 'Paquetes' },
   { key: 'checklist', label: 'Checklist' },
+  { key: 'profiles', label: 'Perfiles' },
   { key: 'backups', label: 'Backups' },
 ];
+
+const MODULE_LABELS = {
+  dashboard: 'Dashboard', clients: 'Clientes', tasks: 'Tareas',
+  patrocinios: 'Patrocinios', disenos: 'Diseños', redes: 'Redes',
+  logistica: 'Logística', audiovisual: 'Audiovisual', finance: 'Finanzas',
+  communications: 'Comunicaciones', users: 'Usuarios', settings: 'Configuración',
+};
 
 export default function Settings() {
   const [tab, setTab] = useState('departments');
@@ -50,6 +58,12 @@ export default function Settings() {
   const [showSponsorStatusModal, setShowSponsorStatusModal] = useState(false);
   const [sponsorStatusForm, setSponsorStatusForm] = useState({ name: '', sort_order: '' });
 
+  // Profiles state
+  const [profiles, setProfiles] = useState([]);
+  const [showProfileModal, setShowProfileModal] = useState(false);
+  const [profileForm, setProfileForm] = useState({ name: '', description: '' });
+  const [profileModules, setProfileModules] = useState({});
+
   const loadDepts = () => api.get('/departments').then(r => setDepartments(r.data));
   const loadEmps = () => api.get('/employees').then(r => setEmployees(r.data));
   const loadDocTypes = () => api.get('/document-types').then(r => setDocTypes(r.data));
@@ -65,9 +79,11 @@ export default function Settings() {
   };
 
   const loadSponsorStatuses = () => api.get('/sponsor-statuses').then(r => setSponsorStatuses(r.data));
+  const loadProfiles = () => api.get('/profiles').then(r => setProfiles(r.data));
 
-  useEffect(() => { loadDepts(); loadEmps(); loadDocTypes(); loadPackages(); loadSponsorStatuses(); }, []);
+  useEffect(() => { loadDepts(); loadEmps(); loadDocTypes(); loadPackages(); loadSponsorStatuses(); loadProfiles(); }, []);
   useEffect(() => { if (tab === 'backups') loadBackups(); }, [tab]);
+  useEffect(() => { if (tab === 'profiles') loadProfiles(); }, [tab]);
 
   const loadClCatalog = () => api.get('/packages/checklist-items').then(r => setClCatalog(r.data));
 
@@ -289,6 +305,70 @@ export default function Settings() {
     link.href = `/api/backups/${filename}/download?token=${token}`;
     link.download = filename;
     link.click();
+  };
+
+  // ── Profiles CRUD ──
+  const openProfileNew = () => {
+    setProfileForm({ name: '', description: '' });
+    setProfileModules({});
+    setEditingId(null);
+    setError('');
+    setShowProfileModal(true);
+  };
+
+  const editProfile = (p) => {
+    setProfileForm({ name: p.name, description: p.description || '' });
+    const modMap = {};
+    (p.modules || []).forEach(m => { modMap[m.module_key] = { read: true, write: !!m.can_write }; });
+    setProfileModules(modMap);
+    setEditingId(p.id);
+    setError('');
+    setShowProfileModal(true);
+  };
+
+  const toggleProfileModule = (key) => {
+    setProfileModules(prev => {
+      const next = { ...prev };
+      if (next[key]) {
+        delete next[key];
+      } else {
+        next[key] = { read: true, write: false };
+      }
+      return next;
+    });
+  };
+
+  const toggleProfileWrite = (key) => {
+    setProfileModules(prev => ({
+      ...prev,
+      [key]: { ...prev[key], write: !prev[key].write }
+    }));
+  };
+
+  const saveProfile = async () => {
+    if (!profileForm.name.trim()) { setError('Nombre requerido'); return; }
+    setError('');
+    const modules = Object.entries(profileModules).map(([module_key, v]) => ({
+      module_key, can_write: v.write
+    }));
+    try {
+      if (editingId) {
+        await api.put(`/profiles/${editingId}`, { ...profileForm, modules });
+      } else {
+        await api.post('/profiles', { ...profileForm, modules });
+      }
+      setShowProfileModal(false);
+      setProfileForm({ name: '', description: '' });
+      setProfileModules({});
+      setEditingId(null);
+      loadProfiles();
+    } catch (e) { setError(e.response?.data?.error || 'Error'); }
+  };
+
+  const deleteProfile = async (id) => {
+    if (!confirm('¿Eliminar este perfil? Los usuarios asignados perderán el perfil.')) return;
+    await api.delete(`/profiles/${id}`);
+    loadProfiles();
   };
 
   return (
@@ -517,8 +597,95 @@ export default function Settings() {
           </table>
 
           <div style={{ marginTop: '1rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
-            Los backups se realizan automaticamente cada 60 minutos. Se conservan los ultimos 30 respaldos.
+            Los backups se realizan automaticamente cada 8 horas. Se conservan los ultimos 30 respaldos.
             La restauracion crea un backup de seguridad automatico antes de sobreescribir.
+          </div>
+        </div>
+      )}
+
+      {tab === 'profiles' && (
+        <div className="card">
+          <div className="docs-header">
+            <h2>Perfiles de Usuario</h2>
+            <button className="btn" onClick={openProfileNew}>+ Nuevo Perfil</button>
+          </div>
+          <p style={{ color: 'var(--text-light)', fontSize: '.85rem', marginBottom: '1rem' }}>
+            Define perfiles con acceso a módulos específicos. Los usuarios asignados a un perfil solo verán los módulos seleccionados al iniciar sesión.
+          </p>
+          <table>
+            <thead><tr><th>Nombre</th><th>Descripción</th><th>Módulos</th><th>Acciones</th></tr></thead>
+            <tbody>
+              {profiles.map(p => (
+                <tr key={p.id}>
+                  <td style={{ fontWeight: 600 }}>{p.name}</td>
+                  <td>{p.description || '—'}</td>
+                  <td>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '.3rem' }}>
+                      {(p.modules || []).map(m => (
+                        <span key={m.module_key} className={`status-badge ${m.can_write ? 'success' : 'info'}`}
+                          style={{ fontSize: '.72rem', cursor: 'default' }}
+                          title={m.can_write ? 'Lectura + Escritura' : 'Solo lectura'}>
+                          {MODULE_LABELS[m.module_key] || m.module_key}{m.can_write ? ' ✎' : ''}
+                        </span>
+                      ))}
+                      {(!p.modules || p.modules.length === 0) && <span style={{ color: 'var(--text-muted)', fontSize: '.8rem' }}>Sin módulos</span>}
+                    </div>
+                  </td>
+                  <td>
+                    <button className="btn small" onClick={() => editProfile(p)}>Editar</button>
+                    <button className="btn small danger" style={{ marginLeft: '.5rem' }} onClick={() => deleteProfile(p.id)}>Eliminar</button>
+                  </td>
+                </tr>
+              ))}
+              {profiles.length === 0 && <tr><td colSpan="4" className="empty-state">Sin perfiles configurados</td></tr>}
+            </tbody>
+          </table>
+        </div>
+      )}
+
+      {showProfileModal && (
+        <div className="modal-overlay" onClick={() => setShowProfileModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '550px' }}>
+            <h2>{editingId ? 'Editar' : 'Nuevo'} Perfil</h2>
+            {error && <div className="error-msg">{error}</div>}
+            <div className="form-grid">
+              <input className="full-width" placeholder="Nombre del perfil" value={profileForm.name} onChange={e => setProfileForm({ ...profileForm, name: e.target.value })} required />
+              <input className="full-width" placeholder="Descripción (opcional)" value={profileForm.description} onChange={e => setProfileForm({ ...profileForm, description: e.target.value })} />
+            </div>
+            <div style={{ marginTop: '1rem' }}>
+              <div style={{ fontWeight: 600, fontSize: '.85rem', marginBottom: '.5rem' }}>Módulos con acceso</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '.4rem' }}>
+                {Object.entries(MODULE_LABELS).map(([key, label]) => {
+                  const active = !!profileModules[key];
+                  const canWrite = active && profileModules[key].write;
+                  return (
+                    <div key={key} style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      padding: '.45rem .65rem', borderRadius: 'var(--radius)',
+                      background: active ? 'var(--success-subtle)' : 'var(--bg-secondary)',
+                      border: `1px solid ${active ? 'var(--success)' : 'var(--border)'}`,
+                      transition: 'all .15s ease'
+                    }}>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '.5rem', cursor: 'pointer', fontSize: '.83rem' }}>
+                        <input type="checkbox" checked={active} onChange={() => toggleProfileModule(key)} style={{ cursor: 'pointer' }} />
+                        {label}
+                      </label>
+                      {active && (
+                        <label style={{ display: 'flex', alignItems: 'center', gap: '.3rem', cursor: 'pointer', fontSize: '.72rem', color: canWrite ? 'var(--success)' : 'var(--text-muted)' }}
+                          title={canWrite ? 'Escritura habilitada' : 'Solo lectura'}>
+                          <input type="checkbox" checked={canWrite} onChange={() => toggleProfileWrite(key)} style={{ cursor: 'pointer', width: '14px', height: '14px' }} />
+                          Editar
+                        </label>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '.5rem', marginTop: '1.25rem' }}>
+              <button className="btn primary" onClick={saveProfile}>{editingId ? 'Actualizar' : 'Crear'}</button>
+              <button className="btn" onClick={() => setShowProfileModal(false)}>Cancelar</button>
+            </div>
           </div>
         </div>
       )}

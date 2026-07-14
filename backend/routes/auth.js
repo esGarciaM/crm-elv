@@ -5,6 +5,12 @@ import { generateToken, authMiddleware, adminOnly } from '../middleware/auth.js'
 
 const router = Router();
 
+function getUserModules(userId) {
+  const user = db.prepare('SELECT profile_id FROM users WHERE id = ?').get(userId);
+  if (!user || !user.profile_id) return null;
+  return db.prepare('SELECT module_key, can_write FROM profile_modules WHERE profile_id = ?').all(user.profile_id);
+}
+
 router.post('/login', (req, res) => {
   const { username, password } = req.body;
   if (!username || !password) {
@@ -15,16 +21,18 @@ router.post('/login', (req, res) => {
     return res.status(401).json({ error: 'Credenciales inválidas' });
   }
   const token = generateToken(user);
-  res.json({ token, user: { id: user.id, username: user.username, name: user.name, role: user.role } });
+  const modules = getUserModules(user.id);
+  res.json({ token, user: { id: user.id, username: user.username, name: user.name, role: user.role, modules } });
 });
 
 router.get('/me', authMiddleware, (req, res) => {
-  const user = db.prepare('SELECT id, username, name, role, created_at FROM users WHERE id = ?').get(req.user.id);
+  const user = db.prepare('SELECT id, username, name, role, profile_id, created_at FROM users WHERE id = ?').get(req.user.id);
+  user.modules = getUserModules(req.user.id);
   res.json(user);
 });
 
 router.get('/', authMiddleware, adminOnly, (req, res) => {
-  const users = db.prepare('SELECT id, username, name, role, active, created_at FROM users ORDER BY name').all();
+  const users = db.prepare('SELECT id, username, name, role, active, profile_id, created_at FROM users ORDER BY name').all();
   res.json(users);
 });
 
@@ -72,7 +80,7 @@ router.put('/profile', authMiddleware, (req, res) => {
 });
 
 router.put('/:id', authMiddleware, adminOnly, (req, res) => {
-  const { name, role, active, password } = req.body;
+  const { name, role, active, password, profile_id } = req.body;
   const user = db.prepare('SELECT id FROM users WHERE id = ?').get(req.params.id);
   if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
@@ -81,6 +89,7 @@ router.put('/:id', authMiddleware, adminOnly, (req, res) => {
   if (name !== undefined) { updates.push('name = ?'); params.push(name); }
   if (role !== undefined) { updates.push('role = ?'); params.push(role); }
   if (active !== undefined) { updates.push('active = ?'); params.push(active ? 1 : 0); }
+  if (profile_id !== undefined) { updates.push('profile_id = ?'); params.push(profile_id || null); }
   if (password) {
     updates.push('password = ?');
     params.push(bcrypt.hashSync(password, 10));

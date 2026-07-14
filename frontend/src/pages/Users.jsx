@@ -3,19 +3,23 @@ import api from '../api';
 
 export default function Users() {
   const [users, setUsers] = useState([]);
+  const [profiles, setProfiles] = useState([]);
   const [showForm, setShowForm] = useState(false);
   const [editingUser, setEditingUser] = useState(null);
-  const [form, setForm] = useState({ username: '', password: '', name: '', role: 'user' });
+  const [form, setForm] = useState({ username: '', password: '', name: '', role: 'user', profile_id: '' });
   const [error, setError] = useState('');
 
   const load = () => {
     api.get('/auth').then((r) => setUsers(r.data));
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+    api.get('/profiles').then(r => setProfiles(r.data)).catch(() => {});
+  }, []);
 
   const resetForm = () => {
-    setForm({ username: '', password: '', name: '', role: 'user' });
+    setForm({ username: '', password: '', name: '', role: 'user', profile_id: '' });
     setEditingUser(null);
     setError('');
   };
@@ -27,14 +31,14 @@ export default function Users() {
 
   const openEdit = (user) => {
     setEditingUser(user);
-    setForm({ username: user.username, password: '', name: user.name, role: user.role });
+    setForm({ username: user.username, password: '', name: user.name, role: user.role, profile_id: user.profile_id || '' });
     setShowForm(true);
   };
 
   const handleSave = async () => {
     try {
       if (editingUser) {
-        const payload = { name: form.name, role: form.role };
+        const payload = { name: form.name, role: form.role, profile_id: form.profile_id || null };
         if (form.password) payload.password = form.password;
         await api.put(`/auth/${editingUser.id}`, payload);
       } else {
@@ -51,6 +55,12 @@ export default function Users() {
   const toggleActive = async (id, active) => {
     await api.put(`/auth/${id}`, { active: active ? 1 : 0 });
     load();
+  };
+
+  const getProfileName = (profileId) => {
+    if (!profileId) return '—';
+    const p = profiles.find(x => x.id === profileId);
+    return p ? p.name : '—';
   };
 
   return (
@@ -79,6 +89,10 @@ export default function Users() {
                 <option value="viewer">Visor</option>
                 <option value="client">Cliente (Portal)</option>
               </select>
+              <select className="full-width" value={form.profile_id} onChange={(e) => setForm({...form, profile_id: e.target.value})}>
+                <option value="">— Sin perfil —</option>
+                {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
             </div>
             <button className="btn primary" onClick={handleSave}>
               {editingUser ? 'Guardar Cambios' : 'Crear'}
@@ -89,7 +103,7 @@ export default function Users() {
 
       <table>
         <thead>
-          <tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Activo</th><th>Creado</th><th>Acciones</th></tr>
+          <tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Perfil</th><th>Activo</th><th>Creado</th><th>Acciones</th></tr>
         </thead>
         <tbody>
           {users.map((u) => (
@@ -97,6 +111,7 @@ export default function Users() {
               <td>{u.username}</td>
               <td>{u.name}</td>
               <td><span className={`role-badge ${u.role}`}>{u.role}</span></td>
+              <td>{getProfileName(u.profile_id)}</td>
               <td>{u.active ? 'Sí' : 'No'}</td>
               <td>{u.created_at}</td>
               <td className="actions-cell">

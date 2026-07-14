@@ -251,24 +251,6 @@ db.exec(`
   );
 `);
 
-// Seed packages
-const pkgExists = db.prepare('SELECT id FROM packages LIMIT 1').get();
-if (!pkgExists) {
-  const pkgs = [
-    ['Origen ($$1000)', 1000, 'monetario', 1],
-    ['Origen E (1000)', 1000, 'especie', 2],
-    ['Presente ($$2500)', 2500, 'monetario', 3],
-    ['Presente E (3000)', 3000, 'especie', 4],
-    ['Futuro ($$3500)', 3500, 'monetario', 5],
-    ['Futuro E (4500)', 4500, 'especie', 6],
-    ['Legado ($$6000)', 6000, 'monetario', 7],
-    ['Legado E (6500)', 6500, 'especie', 8],
-  ];
-  const insert = db.prepare('INSERT INTO packages (name, amount, type, sort_order) VALUES (?, ?, ?, ?)');
-  for (const p of pkgs) insert.run(...p);
-  console.log('Default packages created');
-}
-
 // ─── Package checklist items ──
 db.exec(`
   CREATE TABLE IF NOT EXISTS package_checklist_items (
@@ -286,107 +268,6 @@ db.exec(`
     UNIQUE(package_id, item_id)
   );
 `);
-
-const chkExists = db.prepare('SELECT id FROM package_checklist_items LIMIT 1').get();
-if (!chkExists) {
-  const items = [
-    ['welcome_post', 'Post de bienvenida', 10],
-    ['event_ticket', 'Boleto al evento', 20],
-    ['promo_post', 'Post promocional en redes sociales del simposio', 30],
-    ['logo_main_banner', 'Logo en lona principal', 40],
-    ['event_day_mention', 'Mención el día del evento', 50],
-    ['company_social_post', 'Elaboración de un post para redes de la empresa', 60],
-    ['vacancy_promotion', 'Difusión de vacantes u oferta en redes sociales del simposio', 70],
-    ['marketing_workshop', 'Acceso a taller de marketing', 80],
-    ['logo_event_screen', 'Logo en pantalla del evento', 90],
-    ['kit_relindo', 'KIT relindo oficial', 100],
-    ['social_story_design', '1 diseño para historia para redes sociales de la empresa', 110],
-    ['promo_video_30s', '1 video promocional en redes (30 seg max)', 120],
-    ['lobby_activation', 'Espacio para activación en el lobby del evento', 130],
-    ['promo_video_1min', 'Video promocional en redes sociales (1 min max)', 140],
-    ['press_conference', 'Rueda de prensa', 150],
-    ['sponsor_brunch', 'Brunch con patrocinadores', 160],
-    ['photo_with_speakers', 'Foto con conferencistas oficiales', 170],
-  ];
-  const insert = db.prepare('INSERT INTO package_checklist_items (key, label, sort_order) VALUES (?, ?, ?)');
-  for (const it of items) insert.run(...it);
-  console.log('Default package checklist items created');
-} else {
-  // Migration: replace existing items with the new set
-  const newKeys = [
-    'welcome_post', 'event_ticket', 'promo_post', 'logo_main_banner',
-    'event_day_mention', 'company_social_post', 'vacancy_promotion',
-    'marketing_workshop', 'logo_event_screen', 'kit_relindo',
-    'social_story_design', 'promo_video_30s', 'lobby_activation',
-    'promo_video_1min', 'press_conference', 'sponsor_brunch', 'photo_with_speakers'
-  ];
-  const existingKeys = db.prepare('SELECT key FROM package_checklist_items').all().map(r => r.key);
-  if (existingKeys.length !== newKeys.length || existingKeys.some(k => !newKeys.includes(k))) {
-    const txn = db.transaction(() => {
-      db.exec('DELETE FROM package_checklist');
-      db.exec('DELETE FROM package_checklist_items');
-      const items = [
-        ['welcome_post', 'Post de bienvenida', 10],
-        ['event_ticket', 'Boleto al evento', 20],
-        ['promo_post', 'Post promocional en redes sociales del simposio', 30],
-        ['logo_main_banner', 'Logo en lona principal', 40],
-        ['event_day_mention', 'Mención el día del evento', 50],
-        ['company_social_post', 'Elaboración de un post para redes de la empresa', 60],
-        ['vacancy_promotion', 'Difusión de vacantes u oferta en redes sociales del simposio', 70],
-        ['marketing_workshop', 'Acceso a taller de marketing', 80],
-        ['logo_event_screen', 'Logo en pantalla del evento', 90],
-        ['kit_relindo', 'KIT relindo oficial', 100],
-        ['social_story_design', '1 diseño para historia para redes sociales de la empresa', 110],
-        ['promo_video_30s', '1 video promocional en redes (30 seg max)', 120],
-        ['lobby_activation', 'Espacio para activación en el lobby del evento', 130],
-        ['promo_video_1min', 'Video promocional en redes sociales (1 min max)', 140],
-        ['press_conference', 'Rueda de prensa', 150],
-        ['sponsor_brunch', 'Brunch con patrocinadores', 160],
-        ['photo_with_speakers', 'Foto con conferencistas oficiales', 170],
-      ];
-      const insert = db.prepare('INSERT INTO package_checklist_items (key, label, sort_order) VALUES (?, ?, ?)');
-      for (const it of items) insert.run(...it);
-    });
-    txn();
-    console.log('Package checklist items migrated');
-  }
-}
-
-// Seed document_types
-const docTypeExists = db.prepare('SELECT id FROM document_types LIMIT 1').get();
-if (!docTypeExists) {
-  const types = ['Permiso', 'Invitación', 'Comunicado', 'Oficio', 'Contrato'];
-  const insert = db.prepare('INSERT INTO document_types (name) VALUES (?)');
-  for (const t of types) insert.run(t);
-  console.log('Default document types created');
-}
-
-// Seed departments
-const deptExists = db.prepare('SELECT id FROM departments LIMIT 1').get();
-if (!deptExists) {
-  const departments = [
-    'Diseño', 'Redes', 'Decoración', 'Logística',
-    'Patrocinio', 'Producción Audiovisual', 'Comunicados'
-  ];
-  const insert = db.prepare('INSERT INTO departments (name) VALUES (?)');
-  for (const d of departments) insert.run(d);
-  console.log('Default departments created');
-}
-
-// Seed sponsor statuses
-const sponsorStatusExists = db.prepare('SELECT id FROM sponsor_statuses LIMIT 1').get();
-if (!sponsorStatusExists) {
-  const statuses = [
-    ['Por contactar', 1],
-    ['En seguimiento', 2],
-    ['Propuesta enviada', 3],
-    ['Confirmado', 4],
-    ['Pagado', 5]
-  ];
-  const insert = db.prepare('INSERT INTO sponsor_statuses (name, sort_order) VALUES (?, ?)');
-  for (const s of statuses) insert.run(...s);
-  console.log('Default sponsor statuses created');
-}
 
 // ─── Patrocinio tracking (checklist + comments) ──
 db.exec(`
@@ -443,16 +324,6 @@ db.exec(`
     updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
   );
 `);
-
-// Seed existing diseño data from Excel
-const disenoExists = db.prepare('SELECT id FROM disenos LIMIT 1').get();
-if (!disenoExists) {
-  db.prepare(`
-    INSERT INTO disenos (n_orden, n_paquete, descripcion_proyecto, responsable_patrocinio, fecha_inicio, fecha_vencimiento, prioridad, costo, liquidado, comites_involucrados, responsable_diseno, status, comentarios_extras)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(1, '7', 'PAQUETE COMPLETO PARA PERFUMERIA', 'ALBERTO', '2026-06-26', '2026-06-10', 'MAXIMA', 7000, 0.5, 'AUDIO VISUAL,REDES,DISEÑO', 'MELISSA', 'SE TRABAJA', 'SE ESTA TRABAJANDO EN VIDEO');
-  console.log('Default diseño seed data created');
-}
 
 // ─── Redes module ──
 db.exec(`

@@ -456,28 +456,19 @@ router.delete('/events/:id', authMiddleware, (req, res) => {
   res.json({ message: 'Registro eliminado' });
 });
 
-// ─── POST /events/:id/comments — Agregar comentario + archivos
-router.post('/events/:id/comments', authMiddleware, upload.array('files', 5), (req, res) => {
-  const { comment, video_link } = req.body;
+// ─── POST /events/:id/comments — Agregar comentario + link de imagen
+router.post('/events/:id/comments', authMiddleware, (req, res) => {
+  const { comment, video_link, image_link } = req.body;
 
-  if ((!comment || !comment.trim()) && (!req.files || req.files.length === 0) && !video_link) {
-    return res.status(400).json({ error: 'Debes escribir un comentario, adjuntar archivos o agregar un link de video' });
+  if ((!comment || !comment.trim()) && !video_link && !image_link) {
+    return res.status(400).json({ error: 'Debes escribir un comentario, agregar un link de video o un link de imagen' });
   }
 
   const result = db.prepare(
-    'INSERT INTO audiovisual_comments (audiovisual_event_id, comment, video_link, created_by) VALUES (?, ?, ?, ?)'
-  ).run(req.params.id, (comment || '').trim(), video_link || null, req.user.id);
+    'INSERT INTO audiovisual_comments (audiovisual_event_id, comment, video_link, image_link, created_by) VALUES (?, ?, ?, ?, ?)'
+  ).run(req.params.id, (comment || '').trim(), video_link || null, image_link || null, req.user.id);
 
   const commentId = result.lastInsertRowid;
-
-  if (req.files && req.files.length > 0) {
-    const insertFile = db.prepare(
-      'INSERT INTO audiovisual_comment_files (comment_id, file_url, file_name) VALUES (?, ?, ?)'
-    );
-    for (const file of req.files) {
-      insertFile.run(commentId, `/uploads/audiovisual/${file.filename}`, file.originalname);
-    }
-  }
 
   const newComment = db.prepare(`
     SELECT c.*, u.name as created_by_name, resp.name as responsible_name, del.name as deleted_by_name

@@ -49,7 +49,7 @@ export default function Audiovisual() {
   const [evDetailLoading, setEvDetailLoading] = useState(false);
   const [evNewComment, setEvNewComment] = useState('');
   const [evCommentVideoLink, setEvCommentVideoLink] = useState('');
-  const [evCommentFiles, setEvCommentFiles] = useState([]);
+  const [evCommentImageLink, setEvCommentImageLink] = useState('');
   const [evSendingComment, setEvSendingComment] = useState(false);
 
   // Calendar
@@ -210,15 +210,15 @@ export default function Audiovisual() {
 
   // ── Event Comments ──
   const sendEvComment = async () => {
-    if ((!evNewComment.trim() && evCommentFiles.length === 0 && !evCommentVideoLink) || !selectedEv) return;
+    if ((!evNewComment.trim() && !evCommentVideoLink && !evCommentImageLink) || !selectedEv) return;
     setEvSendingComment(true);
-    const fd = new FormData();
-    if (evNewComment.trim()) fd.append('comment', evNewComment.trim());
-    if (evCommentVideoLink) fd.append('video_link', evCommentVideoLink);
-    for (const f of evCommentFiles) fd.append('files', f);
     try {
-      await api.post(`/audiovisual/events/${selectedEv.id}/comments`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-      setEvNewComment(''); setEvCommentVideoLink(''); setEvCommentFiles([]);
+      const payload = {};
+      if (evNewComment.trim()) payload.comment = evNewComment.trim();
+      if (evCommentVideoLink) payload.video_link = evCommentVideoLink;
+      if (evCommentImageLink) payload.image_link = evCommentImageLink;
+      await api.post(`/audiovisual/events/${selectedEv.id}/comments`, payload);
+      setEvNewComment(''); setEvCommentVideoLink(''); setEvCommentImageLink('');
       loadEvDetail(selectedEv.id);
     } catch {}
     setEvSendingComment(false);
@@ -893,6 +893,7 @@ export default function Audiovisual() {
                           </div>
                           {c.comment && <p style={{ fontSize: '0.85rem', margin: '0.25rem 0', whiteSpace: 'pre-wrap' }}>{c.comment}</p>}
                           {c.video_link && <a href={c.video_link} target="_blank" rel="noreferrer" style={{ fontSize: '0.8rem', color: 'var(--info)' }}>🔗 Ver video</a>}
+                          {c.image_link && <a href={c.image_link} target="_blank" rel="noreferrer" style={{ fontSize: '0.8rem', color: 'var(--info)' }}>🖼️ Ver imagen</a>}
                           {c.files?.length > 0 && (
                             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginTop: '0.4rem' }}>
                               {c.files.map(f => (
@@ -912,11 +913,7 @@ export default function Audiovisual() {
                   <textarea className="full-width" rows={2} placeholder="Escribe un comentario..." value={evNewComment} onChange={e => setEvNewComment(e.target.value)} onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendEvComment(); } }} style={{ marginBottom: '0.5rem' }} />
                   <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center', minHeight: '32px' }}>
                     <input className="search-input" placeholder="Link de video (opcional)" value={evCommentVideoLink} onChange={e => setEvCommentVideoLink(e.target.value)} style={{ flex: 1, minWidth: '150px', fontSize: '0.8rem', height: '32px', boxSizing: 'border-box', padding: '0.35rem 0.5rem' }} />
-                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: '0.3rem', padding: '0 0.75rem', background: 'var(--bg-hover)', borderRadius: '6px', cursor: 'pointer', fontSize: '0.8rem', height: '32px', boxSizing: 'border-box' }}>
-                      📷 Imagenes (max 5)
-                      <input type="file" accept="image/*" multiple onChange={e => setEvCommentFiles(Array.from(e.target.files).slice(0, 5))} style={{ display: 'none' }} />
-                    </label>
-                    {evCommentFiles.length > 0 && <span style={{ fontSize: '0.75rem', color: 'var(--text-light)' }}>{evCommentFiles.length} archivo(s)</span>}
+                    <input className="search-input" placeholder="Link de imagen (opcional)" value={evCommentImageLink} onChange={e => setEvCommentImageLink(e.target.value)} style={{ flex: 1, minWidth: '150px', fontSize: '0.8rem', height: '32px', boxSizing: 'border-box', padding: '0.35rem 0.5rem' }} />
                     <button className="btn success" onClick={sendEvComment} disabled={evSendingComment} style={{ fontSize: '0.8rem' }}>{evSendingComment ? '...' : 'Enviar'}</button>
                   </div>
                 </div>
