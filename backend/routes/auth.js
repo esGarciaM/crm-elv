@@ -42,6 +42,35 @@ router.post('/', authMiddleware, adminOnly, (req, res) => {
   res.status(201).json({ id: result.lastInsertRowid, username, name, role: role || 'user' });
 });
 
+router.put('/profile', authMiddleware, (req, res) => {
+  const { name, currentPassword, newPassword } = req.body;
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(req.user.id);
+  if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+
+  if (newPassword) {
+    if (!currentPassword) {
+      return res.status(400).json({ error: 'Contraseña actual requerida para cambiarla' });
+    }
+    if (!bcrypt.compareSync(currentPassword, user.password)) {
+      return res.status(400).json({ error: 'La contraseña actual es incorrecta' });
+    }
+  }
+
+  const updates = [];
+  const params = [];
+  if (name !== undefined && name.trim()) { updates.push('name = ?'); params.push(name.trim()); }
+  if (newPassword) { updates.push('password = ?'); params.push(bcrypt.hashSync(newPassword, 10)); }
+
+  if (updates.length === 0) return res.status(400).json({ error: 'Sin cambios' });
+
+  updates.push("updated_at = datetime('now','localtime')");
+  params.push(req.user.id);
+  db.prepare(`UPDATE users SET ${updates.join(', ')} WHERE id = ?`).run(...params);
+
+  const updated = db.prepare('SELECT id, username, name, role, created_at FROM users WHERE id = ?').get(req.user.id);
+  res.json(updated);
+});
+
 router.put('/:id', authMiddleware, adminOnly, (req, res) => {
   const { name, role, active, password } = req.body;
   const user = db.prepare('SELECT id FROM users WHERE id = ?').get(req.params.id);

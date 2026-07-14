@@ -1,6 +1,16 @@
 import { useState, useEffect } from 'react';
 import api from '../api';
 
+const TABS = [
+  { key: 'departments', label: 'Departamentos' },
+  { key: 'employees', label: 'Empleados' },
+  { key: 'docTypes', label: 'Tipos de Documento' },
+  { key: 'sponsorStatuses', label: 'Estatus de Patrocinio' },
+  { key: 'packages', label: 'Paquetes' },
+  { key: 'checklist', label: 'Checklist' },
+  { key: 'backups', label: 'Backups' },
+];
+
 export default function Settings() {
   const [tab, setTab] = useState('departments');
   const [departments, setDepartments] = useState([]);
@@ -287,14 +297,12 @@ export default function Settings() {
         <h1>Configuración</h1>
       </div>
 
-      <div className="filter-bar">
-        <button className={`filter-btn ${tab === 'departments' ? 'active' : ''}`} onClick={() => setTab('departments')}>Departamentos</button>
-        <button className={`filter-btn ${tab === 'employees' ? 'active' : ''}`} onClick={() => setTab('employees')}>Empleados</button>
-        <button className={`filter-btn ${tab === 'docTypes' ? 'active' : ''}`} onClick={() => setTab('docTypes')}>Tipos de Documento</button>
-        <button className={`filter-btn ${tab === 'sponsorStatuses' ? 'active' : ''}`} onClick={() => setTab('sponsorStatuses')}>Estatus de Patrocinio</button>
-        <button className={`filter-btn ${tab === 'packages' ? 'active' : ''}`} onClick={() => setTab('packages')}>Paquetes</button>
-        <button className={`filter-btn ${tab === 'checklist' ? 'active' : ''}`} onClick={() => setTab('checklist')}>Checklist</button>
-        <button className={`filter-btn ${tab === 'backups' ? 'active' : ''}`} onClick={() => setTab('backups')}>Backups</button>
+      <div className="finance-tabs">
+        {TABS.map(t => (
+          <button key={t.key} className={`finance-tab ${tab === t.key ? 'active' : ''}`} onClick={() => setTab(t.key)}>
+            {t.label}
+          </button>
+        ))}
       </div>
 
       {tab === 'departments' && (

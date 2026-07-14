@@ -199,13 +199,14 @@ body {
 .nav-links { list-style: none; flex: 1; }
 .nav-links li { margin-bottom: .25rem; }
 .nav-links a {
-  display: block; padding: .65rem .75rem; color: var(--sidebar-text);
+  display: flex; align-items: center; gap: .6rem; padding: .65rem .75rem; color: var(--sidebar-text);
   text-decoration: none; border-radius: var(--radius); font-size: .9rem;
 }
 .nav-links a:hover { background: var(--sidebar-hover); color: white; }
 .logout-btn {
   margin-top: auto; background: var(--sidebar-btn); color: white;
   border: none; padding: .65rem; border-radius: var(--radius); cursor: pointer; font-size: .85rem;
+  display: flex; align-items: center; justify-content: center; gap: .5rem;
 }
 .logout-btn:hover { background: var(--sidebar-btn-hover); }
 .menu-toggle { display: none; }
@@ -370,6 +371,44 @@ table a:hover { text-decoration: underline; }
 }
 .form-grid textarea { min-height: 80px; resize: vertical; }
 .full-width { grid-column: 1 / -1; }
+
+/* MODAL HEADER & ACTIONS */
+.modal-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;
+}
+.modal-header h2 { display: flex; align-items: center; gap: .5rem; margin: 0; }
+.modal-close {
+  background: none; border: none; cursor: pointer; color: var(--text-light);
+  padding: .25rem; border-radius: var(--radius); display: flex;
+}
+.modal-close:hover { background: var(--bg-hover); color: var(--text); }
+.modal-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1.25rem; }
+
+/* USER NAME BUTTON (sidebar) */
+.user-name-btn {
+  background: none; border: none; color: inherit; font: inherit; cursor: pointer;
+  padding: 0; opacity: .8; border-bottom: 1px dashed rgba(255,255,255,.3);
+}
+.user-name-btn:hover { opacity: 1; border-bottom-color: rgba(255,255,255,.6); }
+
+/* PROFILE MODAL */
+.profile-fields { display: grid; gap: .75rem; }
+.profile-field label {
+  display: block; font-size: .78rem; color: var(--text-light); margin-bottom: .25rem; font-weight: 500;
+}
+.profile-field input {
+  padding: .6rem; border: 1px solid var(--border); border-radius: var(--radius);
+  font-size: .85rem; width: 100%; background: var(--card); color: var(--text);
+}
+.profile-field input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--focus-ring); }
+.profile-field input.disabled-field {
+  background: var(--bg); color: var(--text-light); cursor: not-allowed; opacity: .7;
+}
+.profile-divider { border-top: 1px solid var(--border); margin: 1.25rem 0; }
+.profile-section-title {
+  font-size: .85rem; font-weight: 600; color: var(--text-dark); margin-bottom: .75rem;
+  display: flex; align-items: center; gap: .4rem;
+}
 
 /* TABLE CONTAINER */
 .table-container { overflow-x: auto; }

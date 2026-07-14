@@ -63,12 +63,12 @@ export default function Tasks() {
         </button>
       </div>
 
-      <div className="filter-bar">
-        <button className={`filter-btn ${filter === '' ? 'active' : ''}`} onClick={() => setFilter('')}>Todas</button>
-        <button className={`filter-btn ${filter === 'pending' ? 'active' : ''}`} onClick={() => setFilter('pending')}>Pendientes</button>
-        <button className={`filter-btn ${filter === 'in_progress' ? 'active' : ''}`} onClick={() => setFilter('in_progress')}>En Progreso</button>
-        <button className={`filter-btn ${filter === 'completed' ? 'active' : ''}`} onClick={() => setFilter('completed')}>Completadas</button>
-        <button className={`filter-btn ${filter === 'urgent' ? 'active' : ''}`} onClick={() => setFilter('urgent')}>Urgentes</button>
+      <div className="finance-tabs">
+        <button className={`finance-tab ${filter === '' ? 'active' : ''}`} onClick={() => setFilter('')}>Todas</button>
+        <button className={`finance-tab ${filter === 'pending' ? 'active' : ''}`} onClick={() => setFilter('pending')}>Pendientes</button>
+        <button className={`finance-tab ${filter === 'in_progress' ? 'active' : ''}`} onClick={() => setFilter('in_progress')}>En Progreso</button>
+        <button className={`finance-tab ${filter === 'completed' ? 'active' : ''}`} onClick={() => setFilter('completed')}>Completadas</button>
+        <button className={`finance-tab ${filter === 'urgent' ? 'active' : ''}`} onClick={() => setFilter('urgent')}>Urgentes</button>
       </div>
 
       {showForm && (

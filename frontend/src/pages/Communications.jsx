@@ -56,10 +56,10 @@ export default function Communications() {
     <div>
       <h1>Gestión de Comunicaciones</h1>
 
-      <div className="tabs" style={{ marginBottom: '1.5rem' }}>
-        <button className={`filter-btn ${tab === 'dashboard' ? 'active' : ''}`} onClick={() => setTab('dashboard')}>Dashboard</button>
-        <button className={`filter-btn ${tab === 'new' ? 'active' : ''}`} onClick={() => setTab('new')}>Nueva Solicitud</button>
-        <button className={`filter-btn ${tab === 'list' ? 'active' : ''}`} onClick={() => setTab('list')}>Solicitudes</button>
+      <div className="finance-tabs">
+        <button className={`finance-tab ${tab === 'dashboard' ? 'active' : ''}`} onClick={() => setTab('dashboard')}>Dashboard</button>
+        <button className={`finance-tab ${tab === 'new' ? 'active' : ''}`} onClick={() => setTab('new')}>Nueva Solicitud</button>
+        <button className={`finance-tab ${tab === 'list' ? 'active' : ''}`} onClick={() => setTab('list')}>Solicitudes</button>
       </div>
 
       {tab === 'dashboard' && (
