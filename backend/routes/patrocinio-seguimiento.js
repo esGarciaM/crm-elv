@@ -64,7 +64,7 @@ router.get('/patrocinios/:id/seguimiento', authMiddleware, (req, res) => {
     FROM patrocinio_comments c
     LEFT JOIN users u ON u.id = c.created_by
     LEFT JOIN users del ON del.id = c.deleted_by
-    WHERE c.patrocinio_id = ?
+    WHERE c.patrocinio_id = ? AND (c.deleted = 0 OR c.deleted IS NULL)
     ORDER BY c.created_at ASC
   `).all(id);
 

@@ -10,8 +10,7 @@ export default function Communications() {
   const [stats, setStats] = useState({ byStatus: [], byType: [] });
   const [communications, setCommunications] = useState([]);
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
-  const [form, setForm] = useState({ employee_name: '', department_id: '', document_type_id: '', status: 'asignado', priority: 'media', notes: '' });
-  const [files, setFiles] = useState([]);
+  const [form, setForm] = useState({ employee_name: '', department_id: '', document_type_id: '', status: 'asignado', priority: 'media', notes: '', image_url: '', video_url: '' });
   const [error, setError] = useState('');
 
   const load = (page = 1) => {
@@ -30,13 +29,9 @@ export default function Communications() {
   const submitForm = async (e) => {
     e.preventDefault();
     if (!form.employee_name.trim()) return;
-    const fd = new FormData();
-    Object.entries(form).forEach(([k, v]) => fd.append(k, v));
-    for (const f of files) fd.append('files', f);
     try {
-      await api.post('/communications', fd, { headers: { 'Content-Type': 'multipart/form-data' } });
-      setForm({ employee_name: '', department_id: '', document_type_id: '', status: 'asignado', priority: 'media', notes: '' });
-      setFiles([]);
+      await api.post('/communications', form);
+      setForm({ employee_name: '', department_id: '', document_type_id: '', status: 'asignado', priority: 'media', notes: '', image_url: '', video_url: '' });
       setError('');
       load();
     } catch (err) {
@@ -49,8 +44,6 @@ export default function Communications() {
   const statusLabels = { asignado: 'Asignado', en_redaccion: 'En Redacción', en_revision: 'En Revisión', aprobado: 'Aprobado', entregado: 'Entregado' };
 
   const statusOptions = ['asignado', 'en_redaccion', 'en_revision', 'aprobado', 'entregado'];
-
-  const token = localStorage.getItem('token');
 
   return (
     <div>
@@ -159,10 +152,12 @@ export default function Communications() {
             <label style={{ display: 'block', marginTop: '1rem' }}>Notas:
               <textarea className="full-width" rows="3" value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} style={{ width: '100%', marginTop: '.25rem' }} />
             </label>
-            <label style={{ display: 'block', marginTop: '1rem' }}>Archivos (max 10, 5 MB c/u):
-              <input type="file" multiple onChange={e => setFiles([...e.target.files])} style={{ display: 'block', marginTop: '.25rem' }} />
+            <label style={{ display: 'block', marginTop: '1rem' }}>Enlace de Imagen:
+              <input type="url" placeholder="https://ejemplo.com/imagen.jpg" value={form.image_url} onChange={e => setForm({ ...form, image_url: e.target.value })} style={{ display: 'block', marginTop: '.25rem', width: '100%' }} />
             </label>
-            {files.length > 0 && <p style={{ marginTop: '.5rem', color: '#666' }}>{files.length} archivo(s) seleccionado(s)</p>}
+            <label style={{ display: 'block', marginTop: '1rem' }}>Enlace de Video:
+              <input type="url" placeholder="https://ejemplo.com/video.mp4" value={form.video_url} onChange={e => setForm({ ...form, video_url: e.target.value })} style={{ display: 'block', marginTop: '.25rem', width: '100%' }} />
+            </label>
             <button type="submit" className="btn primary" style={{ marginTop: '1rem' }}>Crear Solicitud</button>
           </form>
         </div>
@@ -181,7 +176,7 @@ export default function Communications() {
                   <th>Tipo Documento</th>
                   <th>Estado</th>
                   <th>Prioridad</th>
-                  <th>Archivos</th>
+                  <th>Medios</th>
                   <th>Acciones</th>
                 </tr>
               </thead>
@@ -202,10 +197,9 @@ export default function Communications() {
                     </td>
                     <td><span className={`badge ${c.priority}`}>{priorityLabels[c.priority]}</span></td>
                     <td>
-                      {c.files?.map(f => (
-                        <a key={f.id} href={`${api.defaults.baseURL}/communications/download/${f.id}?token=${token}`} target="_blank" rel="noreferrer" style={{ display: 'block' }}>{f.original_name}</a>
-                      ))}
-                      {(!c.files || c.files.length === 0) && '-'}
+                      {c.image_url && <a href={c.image_url} target="_blank" rel="noreferrer" style={{ display: 'block' }}>Imagen</a>}
+                      {c.video_url && <a href={c.video_url} target="_blank" rel="noreferrer" style={{ display: 'block' }}>Video</a>}
+                      {!c.image_url && !c.video_url && '-'}
                     </td>
                     <td>
                       <button className="btn small danger" onClick={async () => {

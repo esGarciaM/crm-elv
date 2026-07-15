@@ -236,6 +236,15 @@ function TabPatrocinios() {
     sponsorship_type: '', payment_status: '', visit_status: '',
     student_obtained: '', student_contacted: '', q: ''
   });
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [selectedPatrocinio, setSelectedPatrocinio] = useState(null);
+  const [paymentForm, setPaymentForm] = useState({
+    amount: '', payment_date: new Date().toISOString().split('T')[0],
+    payment_method: '', reference: '', notes: ''
+  });
+  const [paymentHistory, setPaymentHistory] = useState({ payments: [], totalPaid: 0 });
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [error, setError] = useState('');
 
   const load = () => {
     const params = {};
@@ -260,6 +269,57 @@ function TabPatrocinios() {
   };
 
   const hasFilters = Object.values(filters).some(v => v);
+
+  const openPaymentModal = (patrocinio) => {
+    setSelectedPatrocinio(patrocinio);
+    setPaymentForm({
+      amount: '', payment_date: new Date().toISOString().split('T')[0],
+      payment_method: '', reference: '', notes: ''
+    });
+    setError('');
+    setShowPaymentModal(true);
+  };
+
+  const handlePaymentSubmit = async (e) => {
+    e.preventDefault();
+    if (!paymentForm.amount || !paymentForm.payment_date) {
+      setError('Monto y fecha son requeridos');
+      return;
+    }
+    try {
+      await api.post(`/finance/sponsorships/${selectedPatrocinio.id}/payments`, paymentForm);
+      setShowPaymentModal(false);
+      setSelectedPatrocinio(null);
+      load();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Error al registrar pago');
+    }
+  };
+
+  const openHistoryModal = async (patrocinio) => {
+    setSelectedPatrocinio(patrocinio);
+    try {
+      const res = await api.get(`/finance/sponsorships/${patrocinio.id}/payments`);
+      setPaymentHistory(res.data);
+      setShowHistoryModal(true);
+    } catch (err) {
+      alert('Error al cargar historial');
+    }
+  };
+
+  const deletePayment = async (paymentId) => {
+    if (!confirm('¿Eliminar este pago?')) return;
+    try {
+      await api.delete(`/finance/sponsorships/payments/${paymentId}`);
+      if (selectedPatrocinio) {
+        const res = await api.get(`/finance/sponsorships/${selectedPatrocinio.id}/payments`);
+        setPaymentHistory(res.data);
+      }
+      load();
+    } catch (err) {
+      alert('Error al eliminar pago');
+    }
+  };
 
   return (
     <div>
@@ -328,7 +388,7 @@ function TabPatrocinios() {
         ) : (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Fecha</th><th>Empresa</th><th>Contacto</th><th>Tipo</th><th>Paquete</th><th>Estado Pago</th><th>Visita</th><th>Alumno Obtenido</th><th>Alumno Contactado</th></tr></thead>
+              <thead><tr><th>Fecha</th><th>Empresa</th><th>Contacto</th><th>Tipo</th><th>Paquete</th><th>Estado Pago</th><th>Visita</th><th>Acciones</th></tr></thead>
               <tbody>
                 {data.sponsorships.map(p => (
                   <tr key={p.id}>
@@ -339,8 +399,12 @@ function TabPatrocinios() {
                     <td>{p.package || '—'}</td>
                     <td><span className={`status-badge ${p.payment_status?.toLowerCase()}`}>{p.payment_status || 'Pendiente'}</span></td>
                     <td>{p.visit_status || '—'}</td>
-                    <td>{p.student_obtained || '—'}</td>
-                    <td>{p.student_contacted || '—'}</td>
+                    <td>
+                      <div className="actions-cell">
+                        <button className="btn small primary" onClick={() => openPaymentModal(p)} title="Capturar Pago">$ Pago</button>
+                        <button className="btn small" onClick={() => openHistoryModal(p)} title="Historial">Historial</button>
+                      </div>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -348,6 +412,75 @@ function TabPatrocinios() {
           </div>
         )}
       </div>
+
+      {/* Modal de Captura de Pago */}
+      {showPaymentModal && selectedPatrocinio && (
+        <div className="modal-overlay" onClick={() => setShowPaymentModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 500 }}>
+            <h2>Capturar Pago - {selectedPatrocinio.company_name}</h2>
+            {error && <div className="error-msg">{error}</div>}
+            <form onSubmit={handlePaymentSubmit}>
+              <div className="form-grid">
+                <input type="number" step="0.01" min="0" placeholder="Monto *" value={paymentForm.amount} onChange={e => setPaymentForm({ ...paymentForm, amount: e.target.value })} required />
+                <input type="date" value={paymentForm.payment_date} onChange={e => setPaymentForm({ ...paymentForm, payment_date: e.target.value })} required />
+                <select value={paymentForm.payment_method} onChange={e => setPaymentForm({ ...paymentForm, payment_method: e.target.value })}>
+                  <option value="">— Método de Pago —</option>
+                  <option value="Efectivo">Efectivo</option>
+                  <option value="Transferencia">Transferencia</option>
+                  <option value="Cheque">Cheque</option>
+                  <option value="Tarjeta">Tarjeta</option>
+                  <option value="Otro">Otro</option>
+                </select>
+                <input placeholder="Referencia / Folio" value={paymentForm.reference} onChange={e => setPaymentForm({ ...paymentForm, reference: e.target.value })} />
+                <input className="full-width" placeholder="Notas" value={paymentForm.notes} onChange={e => setPaymentForm({ ...paymentForm, notes: e.target.value })} />
+              </div>
+              <div style={{ display: 'flex', gap: '.5rem', marginTop: '1rem' }}>
+                <button className="btn primary" type="submit">Registrar Pago</button>
+                <button className="btn" type="button" onClick={() => setShowPaymentModal(false)}>Cancelar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Historial de Pagos */}
+      {showHistoryModal && selectedPatrocinio && (
+        <div className="modal-overlay" onClick={() => setShowHistoryModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 700 }}>
+            <h2>Historial de Pagos - {selectedPatrocinio.company_name}</h2>
+            <div style={{ marginBottom: '1rem', padding: '.75rem', background: 'var(--bg-secondary)', borderRadius: 'var(--radius)' }}>
+              <strong>Total Pagado: </strong>
+              <span style={{ color: 'var(--success)', fontSize: '1.1rem' }}>{fmt(paymentHistory.totalPaid)}</span>
+            </div>
+            {paymentHistory.payments.length === 0 ? (
+              <p className="empty-state">No hay pagos registrados</p>
+            ) : (
+              <div className="table-wrap">
+                <table>
+                  <thead>
+                    <tr><th>Fecha</th><th>Monto</th><th>Método</th><th>Referencia</th><th>Notas</th><th>Acciones</th></tr>
+                  </thead>
+                  <tbody>
+                    {paymentHistory.payments.map(p => (
+                      <tr key={p.id}>
+                        <td>{p.payment_date}</td>
+                        <td><strong style={{ color: 'var(--success)' }}>{fmt(p.amount)}</strong></td>
+                        <td>{p.payment_method || '—'}</td>
+                        <td>{p.reference || '—'}</td>
+                        <td>{p.notes || '—'}</td>
+                        <td>
+                          <button className="icon-btn danger" onClick={() => deletePayment(p.id)} title="Eliminar">🗑</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            <button className="btn" style={{ marginTop: '1rem' }} onClick={() => setShowHistoryModal(false)}>Cerrar</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

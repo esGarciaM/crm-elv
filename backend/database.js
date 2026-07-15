@@ -221,19 +221,11 @@ db.exec(`
     status TEXT NOT NULL DEFAULT 'asignado' CHECK(status IN ('asignado','en_redaccion','en_revision','aprobado','entregado')),
     priority TEXT NOT NULL DEFAULT 'media' CHECK(priority IN ('alta','media','baja')),
     notes TEXT,
+    image_url TEXT,
+    video_url TEXT,
     created_by INTEGER REFERENCES users(id),
     created_at TEXT NOT NULL DEFAULT (datetime('now','localtime')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
-  );
-
-  CREATE TABLE IF NOT EXISTS communication_files (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    communication_id INTEGER NOT NULL REFERENCES communications(id) ON DELETE CASCADE,
-    name TEXT NOT NULL,
-    original_name TEXT NOT NULL,
-    mime_type TEXT NOT NULL,
-    size INTEGER NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
   );
 `);
 

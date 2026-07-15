@@ -136,6 +136,51 @@ router.get('/sponsorships', authMiddleware, (req, res) => {
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
+// 2.1 PAGOS DE PATROCINADORES (Historial)
+// ═══════════════════════════════════════════════════════════════════════════
+
+router.get('/sponsorships/:id/payments', authMiddleware, (req, res) => {
+  const payments = db.prepare(`
+    SELECT sp.*, u.name as created_by_name
+    FROM sponsorship_payments sp
+    LEFT JOIN users u ON sp.created_by = u.id
+    WHERE sp.patrocinio_id = ?
+    ORDER BY sp.payment_date DESC
+  `).all(req.params.id);
+
+  const totalPaid = db.prepare(`
+    SELECT COALESCE(SUM(amount), 0) as total FROM sponsorship_payments WHERE patrocinio_id = ?
+  `).get(req.params.id).total;
+
+  res.json({ payments, totalPaid });
+});
+
+router.post('/sponsorships/:id/payments', authMiddleware, (req, res) => {
+  const { amount, payment_date, payment_method, reference, notes } = req.body;
+  const patrocinio_id = req.params.id;
+
+  if (!amount || !payment_date) {
+    return res.status(400).json({ error: 'Monto y fecha son requeridos' });
+  }
+
+  const patrocinio = db.prepare('SELECT id FROM patrocinios WHERE id = ?').get(patrocinio_id);
+  if (!patrocinio) return res.status(404).json({ error: 'Patrocinio no encontrado' });
+
+  const result = db.prepare(`
+    INSERT INTO sponsorship_payments (patrocinio_id, amount, payment_date, payment_method, reference, notes, created_by)
+    VALUES (?, ?, ?, ?, ?, ?, ?)
+  `).run(patrocinio_id, parseFloat(amount), payment_date, payment_method || null, reference || null, notes || null, req.user.id);
+
+  res.status(201).json({ id: result.lastInsertRowid, message: 'Pago registrado' });
+});
+
+router.delete('/sponsorships/payments/:paymentId', authMiddleware, (req, res) => {
+  const result = db.prepare('DELETE FROM sponsorship_payments WHERE id = ?').run(req.params.paymentId);
+  if (result.changes === 0) return res.status(404).json({ error: 'Pago no encontrado' });
+  res.json({ message: 'Pago eliminado' });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
 // 3. SOLICITUDES
 // ═══════════════════════════════════════════════════════════════════════════
 

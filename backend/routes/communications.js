@@ -1,31 +1,6 @@
 import { Router } from 'express';
-import multer from 'multer';
-import { join, dirname } from 'path';
-import { fileURLToPath } from 'url';
-import { randomUUID } from 'crypto';
-import fs from 'fs';
 import db from '../database.js';
 import { authMiddleware } from '../middleware/auth.js';
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const uploadDir = join(__dirname, '..', 'uploads', 'communications');
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => {
-    const ext = file.originalname.split('.').pop();
-    cb(null, `${randomUUID()}.${ext}`);
-  }
-});
-
-const upload = multer({
-  storage,
-  limits: { fileSize: 5 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => {
-    cb(null, true);
-  }
-});
 
 const router = Router();
 
@@ -53,21 +28,7 @@ router.get('/', authMiddleware, (req, res) => {
     ORDER BY c.created_at DESC LIMIT ? OFFSET ?
   `).all(limit, offset);
 
-  const ids = communications.map(c => c.id);
-  let filesMap = {};
-  if (ids.length > 0) {
-    const ph = ids.map(() => '?').join(',');
-    const files = db.prepare(`SELECT * FROM communication_files WHERE communication_id IN (${ph}) ORDER BY created_at`).all(...ids);
-    for (const f of files) {
-      if (!filesMap[f.communication_id]) filesMap[f.communication_id] = [];
-      filesMap[f.communication_id].push(f);
-    }
-  }
-
-  res.json({
-    communications: communications.map(c => ({ ...c, files: filesMap[c.id] || [] })),
-    total, page, totalPages: Math.ceil(total / limit)
-  });
+  res.json({ communications, total, page, totalPages: Math.ceil(total / limit) });
 });
 
 router.get('/stats', authMiddleware, (req, res) => {
@@ -86,15 +47,13 @@ router.get('/:id', authMiddleware, (req, res) => {
     WHERE c.id = ?
   `).get(req.params.id);
   if (!comm) return res.status(404).json({ error: 'Comunicación no encontrada' });
-  const files = db.prepare('SELECT * FROM communication_files WHERE communication_id = ? ORDER BY created_at').all(req.params.id);
-  res.json({ ...comm, files });
+  res.json(comm);
 });
 
-router.post('/', authMiddleware, upload.array('files', 10), (req, res) => {
-  const { employee_name, department_id, document_type_id, status, priority, notes } = req.body;
+router.post('/', authMiddleware, (req, res) => {
+  const { employee_name, department_id, document_type_id, status, priority, notes, image_url, video_url } = req.body;
 
   if (!employee_name) {
-    if (req.files) for (const f of req.files) fs.unlinkSync(f.path);
     return res.status(400).json({ error: 'Nombre del empleado requerido' });
   }
 
@@ -103,9 +62,9 @@ router.post('/', authMiddleware, upload.array('files', 10), (req, res) => {
     folio = generateFolio();
     try {
       result = db.prepare(`
-        INSERT INTO communications (folio, employee_name, department_id, document_type_id, status, priority, notes, created_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `).run(folio, employee_name, department_id || null, document_type_id || null, status || 'asignado', priority || 'media', notes || null, req.user.id);
+        INSERT INTO communications (folio, employee_name, department_id, document_type_id, status, priority, notes, image_url, video_url, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(folio, employee_name, department_id || null, document_type_id || null, status || 'asignado', priority || 'media', notes || null, image_url || null, video_url || null, req.user.id);
       break;
     } catch (e) {
       if (!e.message.includes('UNIQUE')) throw e;
@@ -113,23 +72,14 @@ router.post('/', authMiddleware, upload.array('files', 10), (req, res) => {
     }
   }
 
-  const commId = result.lastInsertRowid;
-
-  if (req.files) {
-    const insert = db.prepare('INSERT INTO communication_files (communication_id, name, original_name, mime_type, size) VALUES (?, ?, ?, ?, ?)');
-    for (const f of req.files) {
-      insert.run(commId, f.filename, f.originalname, f.mimetype, f.size);
-    }
-  }
-
-  res.status(201).json({ id: commId, folio, message: 'Comunicación creada' });
+  res.status(201).json({ id: result.lastInsertRowid, folio, message: 'Comunicación creada' });
 });
 
 router.put('/:id', authMiddleware, (req, res) => {
   const comm = db.prepare('SELECT id FROM communications WHERE id = ?').get(req.params.id);
   if (!comm) return res.status(404).json({ error: 'Comunicación no encontrada' });
 
-  const fields = ['employee_name', 'department_id', 'document_type_id', 'status', 'priority', 'notes'];
+  const fields = ['employee_name', 'department_id', 'document_type_id', 'status', 'priority', 'notes', 'image_url', 'video_url'];
   const updates = [];
   const params = [];
   for (const f of fields) {
@@ -146,24 +96,9 @@ router.put('/:id', authMiddleware, (req, res) => {
 });
 
 router.delete('/:id', authMiddleware, (req, res) => {
-  const files = db.prepare('SELECT * FROM communication_files WHERE communication_id = ?').all(req.params.id);
-  for (const f of files) {
-    const fp = join(uploadDir, f.name);
-    if (fs.existsSync(fp)) fs.unlinkSync(fp);
-  }
   const result = db.prepare('DELETE FROM communications WHERE id = ?').run(req.params.id);
   if (result.changes === 0) return res.status(404).json({ error: 'Comunicación no encontrada' });
   res.json({ message: 'Comunicación eliminada' });
-});
-
-router.get('/download/:fileId', authMiddleware, (req, res) => {
-  const file = db.prepare('SELECT * FROM communication_files WHERE id = ?').get(req.params.fileId);
-  if (!file) return res.status(404).json({ error: 'Archivo no encontrado' });
-  const filePath = join(uploadDir, file.name);
-  if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Archivo no encontrado en disco' });
-  res.setHeader('Content-Type', file.mime_type);
-  res.setHeader('Content-Disposition', `inline; filename="${file.original_name}"`);
-  res.sendFile(filePath);
 });
 
 export default router;
