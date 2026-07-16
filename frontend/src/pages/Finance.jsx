@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../api';
+import SeguimientoSolicitud from '../components/SeguimientoSolicitud';
 
 const fmt = (n) => '$' + Number(n || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 });
 
@@ -231,7 +232,7 @@ function TabAportaciones() {
 // TAB: PATROCINIOS (vista financiera)
 // ═══════════════════════════════════════════════════════════════════════════
 function TabPatrocinios() {
-  const [data, setData] = useState({ sponsorships: [], totalCash: 0, totalKind: 0, totalGeneral: 0 });
+  const [data, setData] = useState({ sponsorships: [], totalCash: 0, totalKind: 0, totalMixed: 0, totalPaid: 0, totalGeneral: 0 });
   const [filters, setFilters] = useState({
     sponsorship_type: '', payment_status: '', visit_status: '',
     student_obtained: '', student_contacted: '', q: ''
@@ -332,9 +333,21 @@ function TabPatrocinios() {
           <span className="stat-num">{fmt(data.totalKind)}</span>
           <span className="stat-label">Total en Especie</span>
         </div>
+        <div className="stat-card" style={{ borderLeftColor: 'var(--accent, #8b5cf6)' }}>
+          <span className="stat-num">{fmt(data.totalMixed)}</span>
+          <span className="stat-label">Total Mixto</span>
+        </div>
         <div className="stat-card info">
           <span className="stat-num">{fmt(data.totalGeneral)}</span>
           <span className="stat-label">Total General</span>
+        </div>
+        <div className="stat-card success">
+          <span className="stat-num">{fmt(data.totalPaid)}</span>
+          <span className="stat-label">Total Pagado</span>
+        </div>
+        <div className="stat-card danger">
+          <span className="stat-num">{fmt(Math.max(0, data.totalGeneral - data.totalPaid))}</span>
+          <span className="stat-label">Por Pagar</span>
         </div>
       </div>
 
@@ -388,7 +401,7 @@ function TabPatrocinios() {
         ) : (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Fecha</th><th>Empresa</th><th>Contacto</th><th>Tipo</th><th>Paquete</th><th>Estado Pago</th><th>Visita</th><th>Acciones</th></tr></thead>
+              <thead><tr><th>Fecha</th><th>Empresa</th><th>Contacto</th><th>Tipo</th><th>Paquete</th><th>Estado Pago</th><th>Pagado</th><th>Visita</th><th>Acciones</th></tr></thead>
               <tbody>
                 {data.sponsorships.map(p => (
                   <tr key={p.id}>
@@ -398,6 +411,7 @@ function TabPatrocinios() {
                     <td><span className={`status-badge ${p.sponsorship_type?.toLowerCase().includes('especie') ? 'pending' : 'completed'}`}>{p.sponsorship_type || '—'}</span></td>
                     <td>{p.package || '—'}</td>
                     <td><span className={`status-badge ${p.payment_status?.toLowerCase()}`}>{p.payment_status || 'Pendiente'}</span></td>
+                    <td style={{ color: p.total_paid > 0 ? 'var(--success)' : 'var(--text-muted)', fontWeight: p.total_paid > 0 ? 600 : 400 }}>{fmt(p.total_paid)}</td>
                     <td>{p.visit_status || '—'}</td>
                     <td>
                       <div className="actions-cell">
@@ -502,6 +516,7 @@ function TabSolicitudes() {
   const [error, setError] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
+  const [seguimientoId, setSeguimientoId] = useState(null);
 
   const load = useCallback(() => {
     const params = { page, limit: 20 };
@@ -628,6 +643,9 @@ function TabSolicitudes() {
                     <button className="btn small" onClick={() => setExpandedId(expandedId === s.id ? null : s.id)}>
                       {expandedId === s.id ? '▲' : '▼'} Detalle
                     </button>
+                    <button className="btn small" onClick={() => setSeguimientoId(seguimientoId === s.id ? null : s.id)}>
+                      Seguimiento
+                    </button>
                     <button className="btn small danger" onClick={() => handleDelete(s.id)}>🗑</button>
                   </div>
                 </div>
@@ -641,6 +659,12 @@ function TabSolicitudes() {
                     {s.payment_date && <p style={{ fontSize: '.85rem', marginBottom: '.5rem' }}><strong>Fecha Pago:</strong> {s.payment_date}</p>}
                     {s.observations && <p style={{ fontSize: '.85rem', marginBottom: '.5rem' }}><strong>Observaciones:</strong> {s.observations}</p>}
                     {s.created_by_name && <p style={{ fontSize: '.85rem' }}><strong>Creado por:</strong> {s.created_by_name}</p>}
+                  </div>
+                )}
+
+                {seguimientoId === s.id && (
+                  <div style={{ marginTop: '.75rem', paddingTop: '.75rem', borderTop: '1px solid var(--border)' }}>
+                    <SeguimientoSolicitud solicitudId={s.id} />
                   </div>
                 )}
               </div>

@@ -20,6 +20,7 @@ import Disenos from './pages/Disenos';
 import Redes from './pages/Redes';
 import Logistica from './pages/Logistica';
 import Audiovisual from './pages/Audiovisual';
+import MisSolicitudes from './pages/MisSolicitudes';
 
 function AppContent() {
   const { user, loading } = useAuth();
@@ -54,6 +55,7 @@ function AppContent() {
         <Route path="/redes" element={<ModuleRoute module="redes"><Redes /></ModuleRoute>} />
         <Route path="/logistica" element={<ModuleRoute module="logistica"><Logistica /></ModuleRoute>} />
         <Route path="/audiovisual" element={<ModuleRoute module="audiovisual"><Audiovisual /></ModuleRoute>} />
+        <Route path="/mis-solicitudes" element={<MisSolicitudes />} />
         <Route path="/portal" element={<Navigate to="/" />} />
       </Routes>
     </Layout>

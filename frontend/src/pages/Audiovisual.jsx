@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import api from '../api';
-import ComunicadoPatrocinio from '../components/ComunicadoPatrocinio';
 
 export default function Audiovisual() {
   const [activeTab, setActiveTab] = useState('patrocinios');
@@ -285,17 +284,14 @@ export default function Audiovisual() {
   // ═══════════════════════════════════════════════════════════
 
   const isEventTab = activeTab === 'eventos';
-  const isComunicadosTab = activeTab === 'comunicados';
 
   return (
     <div>
       <div className="page-header">
         <h1>Audiovisual</h1>
-        {!isComunicadosTab && (
-          <button className="btn success" onClick={() => isEventTab ? (setShowEvForm(!showEvForm), setEvForm({})) : (setShowAvForm(!showAvForm), setAvForm({}))}>
-            {isEventTab ? (showEvForm ? 'Cancelar' : '+ Nuevo Evento') : (showAvForm ? 'Cancelar' : '+ Nuevo Registro')}
-          </button>
-        )}
+        <button className="btn success" onClick={() => isEventTab ? (setShowEvForm(!showEvForm), setEvForm({})) : (setShowAvForm(!showAvForm), setAvForm({}))}>
+          {isEventTab ? (showEvForm ? 'Cancelar' : '+ Nuevo Evento') : (showAvForm ? 'Cancelar' : '+ Nuevo Registro')}
+        </button>
       </div>
 
       {/* ── Tab Bar ── */}
@@ -304,7 +300,6 @@ export default function Audiovisual() {
           { key: 'patrocinios', label: 'Patrocinios' },
           { key: 'eventos', label: 'Eventos' },
           { key: 'calendario', label: 'Calendario' },
-          { key: 'comunicados', label: 'Comunicados' },
         ].map(t => (
           <button key={t.key} className={activeTab === t.key ? 'active' : ''}
             onClick={() => { setActiveTab(t.key); setShowAvForm(false); setShowEvForm(false); }}>
@@ -414,7 +409,6 @@ export default function Audiovisual() {
             <>
               <div className="finance-tabs" style={{ marginBottom: '1.5rem' }}>
                 <button className={`finance-tab ${avDetailTab === 'seguimiento' ? 'active' : ''}`} onClick={() => setAvDetailTab('seguimiento')}>Seguimiento</button>
-                <button className={`finance-tab ${avDetailTab === 'comunicados' ? 'active' : ''}`} onClick={() => setAvDetailTab('comunicados')}>Comunicados</button>
               </div>
 
               {avDetailTab === 'seguimiento' && (
@@ -789,10 +783,6 @@ export default function Audiovisual() {
               </div>
             </div>
             )}
-
-            {avDetailTab === 'comunicados' && (
-              <ComunicadoPatrocinio audiovisualId={selectedAv.id} />
-            )}
           </>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '3rem', gap: '0.75rem' }}>
@@ -1020,11 +1010,6 @@ export default function Audiovisual() {
             </div>
           </div>
         </div>
-      )}
-
-      {/* ════════════════ COMUNICADOS TAB ════════════════ */}
-      {activeTab === 'comunicados' && (
-        <ComunicadoPatrocinio />
       )}
 
       {/* ════════════════ AV FORM MODAL ════════════════ */}

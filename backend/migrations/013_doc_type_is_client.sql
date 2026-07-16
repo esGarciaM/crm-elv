@@ -1,0 +1,1 @@
+ALTER TABLE document_types ADD COLUMN is_client INTEGER NOT NULL DEFAULT 0;

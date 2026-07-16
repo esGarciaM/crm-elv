@@ -2,12 +2,13 @@ import { useState, useEffect, useRef } from 'react';
 import api from '../api';
 import { useAuth } from '../context/AuthContext';
 
-export default function SeguimientoComunicado({ communicationId }) {
+export default function SeguimientoSolicitud({ solicitudId }) {
   const { user } = useAuth();
   const fileInputRef = useRef(null);
   const messagesEndRef = useRef(null);
 
   const [comments, setComments] = useState([]);
+  const [solicitud, setSolicitud] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [newComment, setNewComment] = useState('');
@@ -18,15 +19,19 @@ export default function SeguimientoComunicado({ communicationId }) {
   const load = async () => {
     setLoading(true);
     try {
-      const res = await api.get(`/communications/${communicationId}/comments`);
-      setComments(res.data);
+      const [commentsRes, solRes] = await Promise.all([
+        api.get(`/finance/solicitudes/${solicitudId}/comments`),
+        api.get(`/finance/solicitudes/${solicitudId}`)
+      ]);
+      setComments(commentsRes.data);
+      setSolicitud(solRes.data);
     } catch {
       setError('Error al cargar seguimiento');
     }
     setLoading(false);
   };
 
-  useEffect(() => { load(); }, [communicationId]);
+  useEffect(() => { load(); }, [solicitudId]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -62,7 +67,7 @@ export default function SeguimientoComunicado({ communicationId }) {
       if (newLink.trim()) fd.append('link', newLink.trim());
       for (const f of newFiles) fd.append('files', f);
 
-      await api.post(`/communications/${communicationId}/comments`, fd, {
+      await api.post(`/finance/solicitudes/${solicitudId}/comments`, fd, {
         headers: { 'Content-Type': 'multipart/form-data' }
       });
       setNewComment('');
@@ -79,7 +84,7 @@ export default function SeguimientoComunicado({ communicationId }) {
   const handleDelete = async (commentId) => {
     if (!confirm('¿Eliminar este comentario?')) return;
     try {
-      await api.delete(`/communications/${communicationId}/comments/${commentId}`);
+      await api.delete(`/finance/solicitudes/${solicitudId}/comments/${commentId}`);
       load();
     } catch {
       setError('Error al eliminar comentario');
@@ -88,7 +93,25 @@ export default function SeguimientoComunicado({ communicationId }) {
 
   const handleDownload = async (commentId, fileId, fileName) => {
     try {
-      const res = await api.get(`/communications/${communicationId}/comments/${commentId}/download/${fileId}`, {
+      const res = await api.get(`/finance/solicitudes/${solicitudId}/comments/${commentId}/download/${fileId}`, {
+        responseType: 'blob'
+      });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch {
+      setError('Error al descargar archivo');
+    }
+  };
+
+  const handleDownloadSolFile = async (fileId, fileName) => {
+    try {
+      const res = await api.get(`/finance/solicitudes/download/${fileId}`, {
         responseType: 'blob'
       });
       const url = window.URL.createObjectURL(new Blob([res.data]));
@@ -164,7 +187,23 @@ export default function SeguimientoComunicado({ communicationId }) {
 
       <div className="chat-container">
         <div className="chat-messages">
-          {comments.length === 0 ? (
+          {solicitud?.files && solicitud.files.length > 0 && (
+            <div className="chat-sol-files">
+              <div className="chat-sol-files-label">📋 Documentos adjuntos de la solicitud</div>
+              <div className="chat-sol-files-list">
+                {solicitud.files.map((f) => (
+                  <button
+                    key={f.id}
+                    className="chat-file-btn other"
+                    onClick={() => handleDownloadSolFile(f.id, f.original_name)}
+                  >
+                    📎 {f.original_name}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+          {comments.length === 0 && (!solicitud?.files || solicitud.files.length === 0) ? (
             <div className="chat-empty">Sin mensajes aún</div>
           ) : (
             grouped.map((item) => {
