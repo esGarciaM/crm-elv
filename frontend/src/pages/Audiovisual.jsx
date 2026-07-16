@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import api from '../api';
+import ComunicadoPatrocinio from '../components/ComunicadoPatrocinio';
 
 export default function Audiovisual() {
   const [activeTab, setActiveTab] = useState('patrocinios');
@@ -24,6 +25,7 @@ export default function Audiovisual() {
   const [avChecklist, setAvChecklist] = useState([]);
   const [avComments, setAvComments] = useState([]);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [avDetailTab, setAvDetailTab] = useState('seguimiento');
   const [newComment, setNewComment] = useState('');
   const [commentResponsible, setCommentResponsible] = useState('');
   const [commentVideoLink, setCommentVideoLink] = useState('');
@@ -283,14 +285,17 @@ export default function Audiovisual() {
   // ═══════════════════════════════════════════════════════════
 
   const isEventTab = activeTab === 'eventos';
+  const isComunicadosTab = activeTab === 'comunicados';
 
   return (
     <div>
       <div className="page-header">
         <h1>Audiovisual</h1>
-        <button className="btn success" onClick={() => isEventTab ? (setShowEvForm(!showEvForm), setEvForm({})) : (setShowAvForm(!showAvForm), setAvForm({}))}>
-          {isEventTab ? (showEvForm ? 'Cancelar' : '+ Nuevo Evento') : (showAvForm ? 'Cancelar' : '+ Nuevo Registro')}
-        </button>
+        {!isComunicadosTab && (
+          <button className="btn success" onClick={() => isEventTab ? (setShowEvForm(!showEvForm), setEvForm({})) : (setShowAvForm(!showAvForm), setAvForm({}))}>
+            {isEventTab ? (showEvForm ? 'Cancelar' : '+ Nuevo Evento') : (showAvForm ? 'Cancelar' : '+ Nuevo Registro')}
+          </button>
+        )}
       </div>
 
       {/* ── Tab Bar ── */}
@@ -299,6 +304,7 @@ export default function Audiovisual() {
           { key: 'patrocinios', label: 'Patrocinios' },
           { key: 'eventos', label: 'Eventos' },
           { key: 'calendario', label: 'Calendario' },
+          { key: 'comunicados', label: 'Comunicados' },
         ].map(t => (
           <button key={t.key} className={activeTab === t.key ? 'active' : ''}
             onClick={() => { setActiveTab(t.key); setShowAvForm(false); setShowEvForm(false); }}>
@@ -405,7 +411,14 @@ export default function Audiovisual() {
               <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
             </div>
           ) : avDetail ? (
-            <div className="dashboard-grid" style={{ alignItems: 'start' }}>
+            <>
+              <div className="finance-tabs" style={{ marginBottom: '1.5rem' }}>
+                <button className={`finance-tab ${avDetailTab === 'seguimiento' ? 'active' : ''}`} onClick={() => setAvDetailTab('seguimiento')}>Seguimiento</button>
+                <button className={`finance-tab ${avDetailTab === 'comunicados' ? 'active' : ''}`} onClick={() => setAvDetailTab('comunicados')}>Comunicados</button>
+              </div>
+
+              {avDetailTab === 'seguimiento' && (
+              <div className="dashboard-grid" style={{ alignItems: 'start' }}>
 
               {/* ── Left: Info Card ── */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -775,6 +788,12 @@ export default function Audiovisual() {
                 </div>
               </div>
             </div>
+            )}
+
+            {avDetailTab === 'comunicados' && (
+              <ComunicadoPatrocinio audiovisualId={selectedAv.id} />
+            )}
+          </>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '3rem', gap: '0.75rem' }}>
               <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'var(--danger-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -1001,6 +1020,11 @@ export default function Audiovisual() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ════════════════ COMUNICADOS TAB ════════════════ */}
+      {activeTab === 'comunicados' && (
+        <ComunicadoPatrocinio />
       )}
 
       {/* ════════════════ AV FORM MODAL ════════════════ */}

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import api from '../api';
+import SeguimientoComunicado from '../components/SeguimientoComunicado';
 
 export default function Communications() {
   const [tab, setTab] = useState('dashboard');
@@ -12,6 +13,7 @@ export default function Communications() {
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 });
   const [form, setForm] = useState({ employee_name: '', department_id: '', document_type_id: '', status: 'asignado', priority: 'media', notes: '', image_url: '', video_url: '' });
   const [error, setError] = useState('');
+  const [seguimientoId, setSeguimientoId] = useState(null);
 
   const load = (page = 1) => {
     api.get('/communications', { params: { page, limit: 50 } }).then(r => {
@@ -190,7 +192,7 @@ export default function Communications() {
                     <td>
                       <select value={c.status} onChange={async (e) => {
                         try { await api.put(`/communications/${c.id}`, { status: e.target.value }); load(pagination.page); }
-                        catch (err) { alert('Error al actualizar estado'); }
+                        catch { alert('Error al actualizar estado'); }
                       }} style={{ padding: '.25rem', borderRadius: '4px', border: `1px solid ${statusColors[c.status] || '#ccc'}` }}>
                         {statusOptions.map(s => <option key={s} value={s}>{statusLabels[s]}</option>)}
                       </select>
@@ -202,6 +204,9 @@ export default function Communications() {
                       {!c.image_url && !c.video_url && '-'}
                     </td>
                     <td>
+                      <button className="btn small" style={{ marginRight: '.25rem' }} onClick={() => setSeguimientoId(seguimientoId === c.id ? null : c.id)}>
+                        Seguimiento
+                      </button>
                       <button className="btn small danger" onClick={async () => {
                         if (confirm(`¿Eliminar ${c.folio}?`)) { await api.delete(`/communications/${c.id}`); load(pagination.page); }
                       }}>Eliminar</button>
@@ -219,6 +224,16 @@ export default function Communications() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {seguimientoId && (
+        <div className="card" style={{ marginTop: '1.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+            <h3 style={{ margin: 0 }}>Seguimiento del comunicado #{seguimientoId}</h3>
+            <button className="btn" onClick={() => setSeguimientoId(null)}>Cerrar</button>
+          </div>
+          <SeguimientoComunicado communicationId={seguimientoId} />
         </div>
       )}
     </div>
