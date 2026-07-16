@@ -169,7 +169,7 @@ export default function Layout({ children }) {
               {userMenuOpen && (
                 <div className="navbar-dropdown">
                   <button className="navbar-dropdown-item" onClick={() => { navigate('/mis-solicitudes'); setUserMenuOpen(false); }}>
-                    <FileCheck size={16} /> Mis Solicitudes
+                    <FileCheck size={16} /> Finanzas
                   </button>
                   <button className="navbar-dropdown-item" onClick={() => { setShowProfile(true); setUserMenuOpen(false); }}>
                     <UserCog size={16} /> Editar Perfil

@@ -78,7 +78,7 @@ function TabMisSolicitudes() {
       </div>
 
       <div className="page-header">
-        <h2>Mis Solicitudes</h2>
+        <h2>Finanzas</h2>
         <button className="btn primary" onClick={() => setShowForm(!showForm)}>
           {showForm ? 'Cancelar' : '+ Nueva Solicitud'}
         </button>
@@ -187,7 +187,7 @@ export default function MisSolicitudes() {
   const [activeTab, setActiveTab] = useState('solicitudes');
 
   const tabs = [
-    { key: 'solicitudes', label: 'Mis Solicitudes' },
+    { key: 'solicitudes', label: 'Finanzas' },
     { key: 'comunicados', label: 'Mis Comunicados' },
   ];
 
