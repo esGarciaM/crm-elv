@@ -129,8 +129,13 @@ router.get('/stats', authMiddleware, (req, res) => {
   const byVisit = db.prepare('SELECT visit_status, COUNT(*) as count FROM patrocinios WHERE visit_status IS NOT NULL AND visit_status != \'\' GROUP BY visit_status').all();
   const byPackage = db.prepare('SELECT package, COUNT(*) as count FROM patrocinios WHERE package IS NOT NULL AND package != \'\' GROUP BY package').all();
 
-  // Extract estimated amounts from packages
-  const allPackages = db.prepare("SELECT package, payment_status, sponsorship_type FROM patrocinios WHERE package IS NOT NULL AND package != ''").all();
+  // Extract estimated amounts from packages table
+  const allPackages = db.prepare(`
+    SELECT p.payment_status, p.sponsorship_type, COALESCE(pk.amount, 0) as pkg_amount
+    FROM patrocinios p
+    LEFT JOIN packages pk ON p.package = pk.name
+    WHERE p.package IS NOT NULL AND p.package != ''
+  `).all();
 
   let totalEstimated = 0;
   let totalPagado = 0;
@@ -139,14 +144,8 @@ router.get('/stats', authMiddleware, (req, res) => {
   let inKindCount = 0;
   let inKindEstimated = 0;
 
-  function extractAmount(pkg) {
-    if (!pkg) return 0;
-    const m = pkg.match(/\$*(\d[\d,]*)/);
-    return m ? parseInt(m[1].replace(/,/g, '')) : 0;
-  }
-
   for (const c of allPackages) {
-    const amt = extractAmount(c.package);
+    const amt = c.pkg_amount;
     totalEstimated += amt;
     const isInKind = c.sponsorship_type && c.sponsorship_type.toLowerCase().includes('especie');
     if (isInKind) {

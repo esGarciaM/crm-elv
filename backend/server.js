@@ -76,14 +76,13 @@ app.get('/api/stats', (req, res) => {
   const pendientes = db.prepare("SELECT COUNT(*) as total FROM clients WHERE payment_status = 'Pendiente'").get().total;
   const abonados = db.prepare("SELECT COUNT(*) as total FROM clients WHERE payment_status = 'Abonado'").get().total;
 
-  const allPackages = db.prepare("SELECT package, payment_status, sponsorship_type FROM clients WHERE package IS NOT NULL AND package != ''").all();
+  const allPackages = db.prepare(`
+    SELECT c.package, c.payment_status, c.sponsorship_type, COALESCE(pk.amount, 0) as pkg_amount
+    FROM clients c
+    LEFT JOIN packages pk ON c.package = pk.name
+    WHERE c.package IS NOT NULL AND c.package != ''
+  `).all();
   const byStatus = { Pagado: [], Pendiente: [], Abonado: [], Cancelado: [] };
-
-  function extractAmount(pkg) {
-    if (!pkg) return 0;
-    const m = pkg.match(/\$*(\d[\d,]*)/);
-    return m ? parseInt(m[1].replace(/,/g, '')) : 0;
-  }
 
   let totalEstimated = 0;
   let totalPagado = 0;
@@ -95,7 +94,7 @@ app.get('/api/stats', (req, res) => {
   const breakdown = [];
 
   for (const c of allPackages) {
-    const amt = extractAmount(c.package);
+    const amt = c.pkg_amount;
     totalEstimated += amt;
     const isInKind = c.sponsorship_type && c.sponsorship_type.toLowerCase().includes('especie');
     if (isInKind) {
@@ -135,7 +134,12 @@ app.get('/api/stats', (req, res) => {
 
   // ── Patrocinios Stats ──
   const totalPatrocinios = db.prepare('SELECT COUNT(*) as count FROM patrocinios').get().count;
-  const patrociniosPkg = db.prepare("SELECT package, payment_status, sponsorship_type FROM patrocinios WHERE package IS NOT NULL AND package != ''").all();
+  const patrociniosPkg = db.prepare(`
+    SELECT p.payment_status, p.sponsorship_type, COALESCE(pk.amount, 0) as pkg_amount
+    FROM patrocinios p
+    LEFT JOIN packages pk ON p.package = pk.name
+    WHERE p.package IS NOT NULL AND p.package != ''
+  `).all();
   let patrociniosEstimated = 0;
   let patrociniosPagado = 0;
   let patrociniosPendiente = 0;
@@ -143,8 +147,7 @@ app.get('/api/stats', (req, res) => {
   let patrociniosInKind = 0;
 
   for (const p of patrociniosPkg) {
-    const m = p.package.match(/\$*(\d[\d,]*)/);
-    const amt = m ? parseInt(m[1].replace(/,/g, '')) : 0;
+    const amt = p.pkg_amount;
     patrociniosEstimated += amt;
     if (p.sponsorship_type && p.sponsorship_type.toLowerCase().includes('especie')) patrociniosInKind += amt;
     const st = p.payment_status || 'Pendiente';

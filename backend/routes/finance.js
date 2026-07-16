@@ -113,33 +113,30 @@ router.get('/sponsorships', authMiddleware, (req, res) => {
            p.sponsorship_type, p.package, p.payment_status, p.payment_detail,
            p.visit_status, p.student_obtained, p.student_contacted,
            p.created_at as date,
-           COALESCE(pp.total_paid, 0) as total_paid
+           COALESCE(pp.total_paid, 0) as total_paid,
+           COALESCE(pk.amount, 0) as package_amount,
+           pk.type as package_type
     FROM patrocinios p
     LEFT JOIN (
       SELECT patrocinio_id, SUM(amount) as total_paid
       FROM sponsorship_payments
       GROUP BY patrocinio_id
     ) pp ON pp.patrocinio_id = p.id
+    LEFT JOIN packages pk ON p.package = pk.name
     ${whereClause}
     ORDER BY p.created_at DESC
   `).all(...params);
-
-  function extractAmount(pkg) {
-    if (!pkg) return 0;
-    const m = pkg.match(/\$*(\d[\d,]*)/);
-    return m ? parseInt(m[1].replace(/,/g, '')) : 0;
-  }
 
   let totalCash = 0;
   let totalKind = 0;
   let totalMixed = 0;
   let totalPaid = 0;
   for (const p of rows) {
-    const amt = extractAmount(p.package);
-    const t = (p.sponsorship_type || '').toLowerCase();
-    if (t.includes('especie') && t.includes('monetario')) totalMixed += amt;
-    else if (t.includes('monetario')) totalCash += amt;
-    else if (t.includes('especie')) totalKind += amt;
+    const amt = p.package_amount || 0;
+    const pkgType = (p.package_type || '').toLowerCase();
+    if (pkgType === 'mixto') totalMixed += amt;
+    else if (pkgType === 'monetario') totalCash += amt;
+    else if (pkgType === 'especie') totalKind += amt;
     totalPaid += (p.total_paid || 0);
   }
 
