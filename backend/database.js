@@ -341,7 +341,7 @@ db.exec(`
 
 // Migration: add patrocinio_id / audiovisual_id to communications
 addColumn('communications', 'patrocinio_id', 'INTEGER REFERENCES patrocinios(id) ON DELETE SET NULL');
-addColumn('communications', 'audiovisual_id', 'INTEGER REFERENCES audiovisual(id) ON DELETE SET NULL');
+addColumn('communications', 'audiovisual_id', 'INTEGER');
 
 // ─── Communication comments (seguimiento) ──
 db.exec(`
