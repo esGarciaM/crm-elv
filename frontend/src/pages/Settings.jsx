@@ -31,7 +31,7 @@ export default function Settings() {
   const [showPkgModal, setShowPkgModal] = useState(false);
   const [deptForm, setDeptForm] = useState({ name: '', description: '' });
   const [empForm, setEmpForm] = useState({ first_name: '', last_name: '', email: '', phone: '', department_id: '' });
-  const [docTypeForm, setDocTypeForm] = useState({ name: '' });
+  const [docTypeForm, setDocTypeForm] = useState({ name: '', is_client: false, template_body: '' });
   const [pkgForm, setPkgForm] = useState({ name: '', amount: '', type: '', sort_order: '' });
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState('');
@@ -803,21 +803,22 @@ export default function Settings() {
         <div className="card">
           <div className="docs-header">
             <h2>Tipos de Documento</h2>
-            <button className="btn" onClick={() => { setDocTypeForm({ name: '' }); setEditingId(null); setShowDocTypeModal(true); }}>+ Nuevo</button>
+            <button className="btn" onClick={() => { setDocTypeForm({ name: '', is_client: false, template_body: '' }); setEditingId(null); setShowDocTypeModal(true); }}>+ Nuevo</button>
           </div>
           <table>
-            <thead><tr><th>Nombre</th><th>Acciones</th></tr></thead>
+            <thead><tr><th>Nombre</th><th>Cliente</th><th>Acciones</th></tr></thead>
             <tbody>
               {docTypes.map(d => (
                 <tr key={d.id}>
                   <td>{d.name}</td>
+                  <td>{d.is_client ? 'Sí' : '—'}</td>
                   <td>
-                    <button className="btn small" onClick={() => { setDocTypeForm({ name: d.name }); setEditingId(d.id); setShowDocTypeModal(true); }}>Editar</button>
+                    <button className="btn small" onClick={() => { setDocTypeForm({ name: d.name, is_client: !!d.is_client, template_body: d.template_body || '' }); setEditingId(d.id); setShowDocTypeModal(true); }}>Editar</button>
                     <button className="btn small danger" style={{ marginLeft: '.5rem' }} onClick={async () => { if (confirm('¿Eliminar tipo de documento?')) { await api.delete(`/document-types/${d.id}`); loadDocTypes(); }}}>Eliminar</button>
                   </td>
                 </tr>
               ))}
-              {docTypes.length === 0 && <tr><td colSpan="2" className="empty-state">Sin tipos de documento</td></tr>}
+              {docTypes.length === 0 && <tr><td colSpan="3" className="empty-state">Sin tipos de documento</td></tr>}
             </tbody>
           </table>
         </div>
@@ -825,19 +826,58 @@ export default function Settings() {
 
       {showDocTypeModal && (
         <div className="modal-overlay" onClick={() => setShowDocTypeModal(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 640 }}>
             <h2>{editingId ? 'Editar' : 'Nuevo'} Tipo de Documento</h2>
             {error && <div className="error-msg">{error}</div>}
             <div className="form-grid">
               <input className="full-width" placeholder="Nombre" value={docTypeForm.name} onChange={e => setDocTypeForm({ ...docTypeForm, name: e.target.value })} required />
+              <label style={{ display: 'flex', alignItems: 'center', gap: '.5rem', cursor: 'pointer' }}>
+                <input type="checkbox" checked={docTypeForm.is_client} onChange={e => setDocTypeForm({ ...docTypeForm, is_client: e.target.checked })} />
+                Es documento de cliente
+              </label>
             </div>
-            <button className="btn primary" onClick={async () => {
+
+            {docTypeForm.is_client && (
+              <div style={{ marginTop: '1rem' }}>
+                <label style={{ display: 'block', fontWeight: 600, marginBottom: '.35rem' }}>Plantilla del documento (Markdown)</label>
+                <textarea
+                  value={docTypeForm.template_body}
+                  onChange={e => setDocTypeForm({ ...docTypeForm, template_body: e.target.value })}
+                  rows={10}
+                  placeholder="# Título del documento&#10;&#10;Estimado/a **{{Contacto}}**,&#10;&#10;Por medio de la presente, **{{Nombre}}** confirma su patrocinio...&#10;&#10;Estado de pago: **{{EstadoPago}}**"
+                  style={{ width: '100%', fontFamily: 'monospace', fontSize: '.85rem', padding: '.75rem', border: '1px solid var(--border)', borderRadius: '6px', resize: 'vertical', boxSizing: 'border-box' }}
+                />
+                <div style={{ marginTop: '.5rem', padding: '.65rem .85rem', background: 'var(--bg-secondary)', borderRadius: '6px', border: '1px solid var(--border)' }}>
+                  <div style={{ fontSize: '.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: '.4rem' }}>
+                    Variables disponibles (clic para copiar)
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '.35rem' }}>
+                    {[
+                      { v: 'Nombre', d: 'Empresa' }, { v: 'Contacto', d: 'Contacto' }, { v: 'Telefono', d: 'Teléfono' },
+                      { v: 'Tipo', d: 'Tipo' }, { v: 'Paquete', d: 'Paquete' }, { v: 'Estatus', d: 'Estatus' },
+                      { v: 'EstadoVisita', d: 'Visita' }, { v: 'EstadoPago', d: 'Pago' }, { v: 'Fecha', d: 'Fecha actual' },
+                      { v: 'DetalleEspecie', d: 'Detalle especie' }, { v: 'DetallePago', d: 'Detalle pago' },
+                      { v: 'RedesSociales', d: 'Redes' }, { v: 'Boletos', d: 'Boletos' }, { v: 'Logo', d: 'Logo' },
+                      { v: 'Notas', d: 'Notas' }
+                    ].map(({ v, d }) => (
+                      <button key={v} type="button" onClick={() => {
+                        navigator.clipboard.writeText(`{{${v}}}`);
+                      }} style={{ padding: '.2rem .5rem', fontSize: '.72rem', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--card)', cursor: 'pointer', fontFamily: 'monospace', color: 'var(--primary)' }} title={`Copiar {{${v}}} — ${d}`}>
+                        {`{{${v}}}`}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <button className="btn primary" style={{ marginTop: '1rem' }} onClick={async () => {
               if (!docTypeForm.name.trim()) return;
               setError('');
               try {
                 if (editingId) { await api.put(`/document-types/${editingId}`, docTypeForm); }
                 else { await api.post('/document-types', docTypeForm); }
-                setShowDocTypeModal(false); setDocTypeForm({ name: '' }); setEditingId(null); loadDocTypes();
+                setShowDocTypeModal(false); setDocTypeForm({ name: '', is_client: false, template_body: '' }); setEditingId(null); loadDocTypes();
               } catch (e) { setError(e.response?.data?.error || 'Error'); }
             }}>{editingId ? 'Actualizar' : 'Crear'}</button>
           </div>

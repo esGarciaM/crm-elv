@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -18,6 +18,10 @@ import {
   Settings,
   FileText,
   LogOut,
+  User,
+  ChevronDown,
+  Menu,
+  FileCheck,
 } from 'lucide-react';
 
 const MODULE_ICONS = {
@@ -71,6 +75,18 @@ export default function Layout({ children }) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuRef = useRef(null);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
+        setUserMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const handleLogout = () => {
     logout();
@@ -132,12 +148,44 @@ export default function Layout({ children }) {
 
       {menuOpen && <div className="sidebar-overlay" onClick={() => setMenuOpen(false)} />}
 
-      <main className="main-content">
-        <button className="menu-toggle" onClick={() => setMenuOpen(!menuOpen)}>
-          {menuOpen ? '✕' : '☰'} Menú
-        </button>
-        {children}
-      </main>
+      <div className="main-area">
+        <header className="top-navbar">
+          <div className="navbar-left">
+            <button className="menu-toggle" onClick={() => setMenuOpen(!menuOpen)}>
+              <Menu size={20} />
+            </button>
+            <span className="navbar-brand">{isClient ? 'Mi Portal' : 'CRM Patrocinios'}</span>
+          </div>
+          <div className="navbar-right" ref={userMenuRef}>
+            <div className="navbar-user-menu">
+              <button className="navbar-user-btn" onClick={() => setUserMenuOpen(!userMenuOpen)}>
+                <span className="navbar-user-icon">
+                  <User size={18} />
+                </span>
+                <span className="navbar-user-name">{user?.name}</span>
+                <span className={`role-badge ${user?.role}`}>{user?.role}</span>
+                <ChevronDown size={14} className={`navbar-chevron ${userMenuOpen ? 'open' : ''}`} />
+              </button>
+              {userMenuOpen && (
+                <div className="navbar-dropdown">
+                  <button className="navbar-dropdown-item" onClick={() => { navigate('/mis-solicitudes'); setUserMenuOpen(false); }}>
+                    <FileCheck size={16} /> Mis Solicitudes
+                  </button>
+                  <button className="navbar-dropdown-item" onClick={() => { setShowProfile(true); setUserMenuOpen(false); }}>
+                    <UserCog size={16} /> Editar Perfil
+                  </button>
+                  <button className="navbar-dropdown-item danger" onClick={handleLogout}>
+                    <LogOut size={16} /> Cerrar Sesión
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </header>
+        <main className="main-content">
+          {children}
+        </main>
+      </div>
 
       {showProfile && (
         <EditProfileModal

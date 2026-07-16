@@ -112,8 +112,15 @@ router.get('/sponsorships', authMiddleware, (req, res) => {
     SELECT p.id, p.company_name, p.contact_person, p.phone,
            p.sponsorship_type, p.package, p.payment_status, p.payment_detail,
            p.visit_status, p.student_obtained, p.student_contacted,
-           p.created_at as date
-    FROM patrocinios p ${whereClause}
+           p.created_at as date,
+           COALESCE(pp.total_paid, 0) as total_paid
+    FROM patrocinios p
+    LEFT JOIN (
+      SELECT patrocinio_id, SUM(amount) as total_paid
+      FROM sponsorship_payments
+      GROUP BY patrocinio_id
+    ) pp ON pp.patrocinio_id = p.id
+    ${whereClause}
     ORDER BY p.created_at DESC
   `).all(...params);
 
@@ -125,14 +132,18 @@ router.get('/sponsorships', authMiddleware, (req, res) => {
 
   let totalCash = 0;
   let totalKind = 0;
+  let totalMixed = 0;
+  let totalPaid = 0;
   for (const p of rows) {
     const amt = extractAmount(p.package);
     const t = (p.sponsorship_type || '').toLowerCase();
-    if (t.includes('monetario')) totalCash += amt;
+    if (t.includes('especie') && t.includes('monetario')) totalMixed += amt;
+    else if (t.includes('monetario')) totalCash += amt;
     else if (t.includes('especie')) totalKind += amt;
+    totalPaid += (p.total_paid || 0);
   }
 
-  res.json({ sponsorships: rows, totalCash, totalKind, totalGeneral: totalCash + totalKind });
+  res.json({ sponsorships: rows, totalCash, totalKind, totalMixed, totalPaid, totalGeneral: totalCash + totalKind + totalMixed });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -185,10 +196,11 @@ router.delete('/sponsorships/payments/:paymentId', authMiddleware, (req, res) =>
 // ═══════════════════════════════════════════════════════════════════════════
 
 router.get('/solicitudes', authMiddleware, (req, res) => {
-  const { status, committee, page = 1, limit = 50 } = req.query;
+  const { status, committee, mine, page = 1, limit = 50 } = req.query;
   const offset = (parseInt(page) - 1) * parseInt(limit);
   let where = [];
   const params = [];
+  if (mine === 'true') { where.push('s.created_by = ?'); params.push(req.user.id); }
   if (status) { where.push('s.status = ?'); params.push(status); }
   if (committee) { where.push('s.committee = ?'); params.push(committee); }
 
@@ -209,9 +221,11 @@ router.get('/solicitudes', authMiddleware, (req, res) => {
     LIMIT ? OFFSET ?
   `).all(...params, parseInt(limit), offset);
 
+  const byStatusWhere = mine === 'true' ? 'WHERE created_by = ?' : '';
+  const byStatusParams = mine === 'true' ? [req.user.id] : [];
   const byStatus = db.prepare(`
-    SELECT status, COUNT(*) as count FROM finance_solicitudes GROUP BY status
-  `).all();
+    SELECT status, COUNT(*) as count FROM finance_solicitudes ${byStatusWhere} GROUP BY status
+  `).all(...byStatusParams);
 
   res.json({
     solicitudes: rows,
@@ -653,6 +667,83 @@ router.post('/webhook/form', (req, res) => {
   );
 
   res.status(201).json({ id: result.lastInsertRowid, message: 'Formulario registrado' });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SOLICITUD COMMENTS (Seguimiento)
+// ═══════════════════════════════════════════════════════════════════════════
+
+router.get('/solicitudes/:id/comments', authMiddleware, (req, res) => {
+  const sol = db.prepare('SELECT id FROM finance_solicitudes WHERE id = ?').get(req.params.id);
+  if (!sol) return res.status(404).json({ error: 'Solicitud no encontrada' });
+
+  const comments = db.prepare(`
+    SELECT sc.*, u.name as created_by_name
+    FROM solicitud_comments sc
+    LEFT JOIN users u ON sc.created_by = u.id
+    WHERE sc.solicitud_id = ?
+    ORDER BY sc.created_at DESC
+  `).all(req.params.id);
+
+  for (const c of comments) {
+    c.files = db.prepare('SELECT * FROM solicitud_comment_files WHERE comment_id = ?').all(c.id);
+  }
+
+  res.json(comments);
+});
+
+router.post('/solicitudes/:id/comments', authMiddleware, upload.array('files', 5), (req, res) => {
+  const sol = db.prepare('SELECT id FROM finance_solicitudes WHERE id = ?').get(req.params.id);
+  if (!sol) return res.status(404).json({ error: 'Solicitud no encontrada' });
+
+  const { comment, link } = req.body;
+  if (!comment && (!req.files || req.files.length === 0) && !link) {
+    return res.status(400).json({ error: 'Comentario, archivos o enlace requerido' });
+  }
+
+  const result = db.prepare(`
+    INSERT INTO solicitud_comments (solicitud_id, comment, link, created_by)
+    VALUES (?, ?, ?, ?)
+  `).run(req.params.id, comment || null, link || null, req.user.id);
+
+  const commentId = result.lastInsertRowid;
+
+  if (req.files && req.files.length > 0) {
+    const insertFile = db.prepare(`
+      INSERT INTO solicitud_comment_files (comment_id, name, original_name, mime_type, size)
+      VALUES (?, ?, ?, ?, ?)
+    `);
+    for (const f of req.files) {
+      insertFile.run(commentId, f.filename, f.originalname, f.mimetype, f.size);
+    }
+  }
+
+  res.status(201).json({ id: commentId, message: 'Comentario agregado' });
+});
+
+router.delete('/solicitudes/:id/comments/:commentId', authMiddleware, (req, res) => {
+  const comment = db.prepare('SELECT id FROM solicitud_comments WHERE id = ? AND solicitud_id = ?').get(req.params.commentId, req.params.id);
+  if (!comment) return res.status(404).json({ error: 'Comentario no encontrado' });
+
+  const files = db.prepare('SELECT name FROM solicitud_comment_files WHERE comment_id = ?').all(req.params.commentId);
+  for (const f of files) {
+    const filePath = join(uploadDir, f.name);
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  }
+
+  db.prepare('DELETE FROM solicitud_comment_files WHERE comment_id = ?').run(req.params.commentId);
+  db.prepare('DELETE FROM solicitud_comments WHERE id = ?').run(req.params.commentId);
+  res.json({ message: 'Comentario eliminado' });
+});
+
+router.get('/solicitudes/:id/comments/:commentId/download/:fileId', authMiddleware, (req, res) => {
+  const file = db.prepare('SELECT * FROM solicitud_comment_files WHERE id = ? AND comment_id = ?').get(req.params.fileId, req.params.commentId);
+  if (!file) return res.status(404).json({ error: 'Archivo no encontrado' });
+
+  const filePath = join(uploadDir, file.name);
+  if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Archivo no encontrado en disco' });
+
+  res.download(filePath, file.original_name);
 });
 
 export default router;

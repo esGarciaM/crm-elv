@@ -339,6 +339,32 @@ db.exec(`
   );
 `);
 
+// Migration: add patrocinio_id / audiovisual_id to communications
+addColumn('communications', 'patrocinio_id', 'INTEGER REFERENCES patrocinios(id) ON DELETE SET NULL');
+addColumn('communications', 'audiovisual_id', 'INTEGER REFERENCES audiovisual(id) ON DELETE SET NULL');
+
+// ─── Communication comments (seguimiento) ──
+db.exec(`
+  CREATE TABLE IF NOT EXISTS communication_comments (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    communication_id INTEGER NOT NULL REFERENCES communications(id) ON DELETE CASCADE,
+    comment TEXT NOT NULL,
+    link TEXT,
+    created_by INTEGER REFERENCES users(id),
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  );
+
+  CREATE TABLE IF NOT EXISTS communication_comment_files (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    comment_id INTEGER NOT NULL REFERENCES communication_comments(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    original_name TEXT NOT NULL,
+    mime_type TEXT NOT NULL,
+    size INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now','localtime'))
+  );
+`);
+
 // ─── Finance module migrations ──
 import { runMigrations } from './migrations/runner.js';
 runMigrations(db);

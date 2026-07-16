@@ -24,6 +24,7 @@ export default function Audiovisual() {
   const [avChecklist, setAvChecklist] = useState([]);
   const [avComments, setAvComments] = useState([]);
   const [detailLoading, setDetailLoading] = useState(false);
+  const [avDetailTab, setAvDetailTab] = useState('seguimiento');
   const [newComment, setNewComment] = useState('');
   const [commentResponsible, setCommentResponsible] = useState('');
   const [commentVideoLink, setCommentVideoLink] = useState('');
@@ -405,7 +406,13 @@ export default function Audiovisual() {
               <style>{`@keyframes spin { to { transform: rotate(360deg) } }`}</style>
             </div>
           ) : avDetail ? (
-            <div className="dashboard-grid" style={{ alignItems: 'start' }}>
+            <>
+              <div className="finance-tabs" style={{ marginBottom: '1.5rem' }}>
+                <button className={`finance-tab ${avDetailTab === 'seguimiento' ? 'active' : ''}`} onClick={() => setAvDetailTab('seguimiento')}>Seguimiento</button>
+              </div>
+
+              {avDetailTab === 'seguimiento' && (
+              <div className="dashboard-grid" style={{ alignItems: 'start' }}>
 
               {/* ── Left: Info Card ── */}
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -775,6 +782,8 @@ export default function Audiovisual() {
                 </div>
               </div>
             </div>
+            )}
+          </>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '3rem', gap: '0.75rem' }}>
               <div style={{ width: '48px', height: '48px', borderRadius: '12px', background: 'var(--danger-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

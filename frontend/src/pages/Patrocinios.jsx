@@ -71,10 +71,15 @@ export default function Patrocinios() {
   const [error, setError] = useState('');
   const navigate = useNavigate();
   const [hoveredCardId, setHoveredCardId] = useState(null);
+  const [docTypes, setDocTypes] = useState([]);
+  const [showDocUrlsModal, setShowDocUrlsModal] = useState(false);
+  const [selectedPatrocinio, setSelectedPatrocinio] = useState(null);
+  const [docUrls, setDocUrls] = useState([]);
 
   useEffect(() => {
     loadPackages();
     loadSponsorStatuses();
+    api.get('/document-types').then(r => setDocTypes(r.data));
     if (viewMode === 'list') loadPatrocinios();
     else loadKanban();
   }, [page, search, viewMode]);
@@ -210,6 +215,19 @@ export default function Patrocinios() {
     }
   };
 
+  const openDocUrlsReadOnly = (p) => {
+    setSelectedPatrocinio(p);
+    setShowDocUrlsModal(true);
+    const clientDocTypes = docTypes.filter(dt => dt.is_client);
+    api.get(`/patrocinio-doc-urls/${p.id}`).then(r => {
+      const existing = r.data;
+      setDocUrls(clientDocTypes.map(dt => {
+        const found = existing.find(e => e.document_type_id === dt.id);
+        return { document_type_name: dt.name, url: found ? found.url || '' : '' };
+      }));
+    });
+  };
+
   if (loading) return <div>Cargando...</div>;
 
   const colors = KANBAN_PALETTES[theme] || KANBAN_PALETTES.light;
@@ -255,7 +273,8 @@ export default function Patrocinios() {
                     <td><span className="status-badge">{p.sponsorship_type || '—'}</span></td>
                     <td><span className={`status-badge ${p.payment_status === 'Pagado' ? 'success' : p.payment_status === 'Cancelado' ? 'danger' : ''}`}>{p.payment_status || 'Pendiente'}</span></td>
                     <td>
-                      <button className="btn small" onClick={() => navigate(`/patrocinios/${p.id}/seguimiento`)}>Ver</button>
+                      <button className="btn small primary" onClick={() => openDocUrlsReadOnly(p)}>Documentos</button>
+                      <button className="btn small" style={{ marginLeft: '.25rem' }} onClick={() => navigate(`/patrocinios/${p.id}/seguimiento`)}>Seguimiento</button>
                       <button className="btn small" style={{ marginLeft: '.25rem' }} onClick={() => openEdit(p)}>Editar</button>
                       <button className="btn small danger" style={{ marginLeft: '.25rem' }} onClick={() => handleDelete(p.id)}>X</button>
                     </td>
@@ -537,6 +556,44 @@ export default function Patrocinios() {
             <div style={{ display: 'flex', gap: '1rem', marginTop: '1.5rem' }}>
               <button className="btn primary" onClick={handleSubmit}>{editingPatrocinio ? 'Actualizar' : 'Crear'}</button>
               <button className="btn" onClick={() => setShowCreateModal(false)}>Cancelar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showDocUrlsModal && (
+        <div className="modal-overlay" onClick={() => setShowDocUrlsModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 560 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <h2 style={{ margin: 0 }}>Documentos — {selectedPatrocinio?.company_name}</h2>
+              <button className="btn" onClick={() => setShowDocUrlsModal(false)}>✕</button>
+            </div>
+            <p style={{ color: 'var(--text-muted)', margin: '0.5rem 0 1.25rem', fontSize: '.875rem' }}>URLs de documentos del patrocinador (solo lectura)</p>
+            {docUrls.length === 0 ? (
+              <p className="empty-state">No hay tipos de documento de cliente configurados</p>
+            ) : (
+              docUrls.map((d, i) => (
+                <div key={i} style={{ display: 'flex', alignItems: 'center', gap: '.75rem', padding: '.65rem .75rem', marginBottom: '.5rem', borderRadius: '8px', background: d.url ? 'var(--bg-secondary)' : 'transparent', border: '1px solid var(--border)' }}>
+                  <span style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, background: d.url ? 'var(--success)' : 'var(--text-light)' }} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 600, fontSize: '.875rem', marginBottom: '.2rem' }}>{d.document_type_name}</div>
+                    {d.url ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '.5rem' }}>
+                        <a href={d.url} target="_blank" rel="noreferrer" style={{ fontSize: '.78rem', color: 'var(--primary)', textDecoration: 'none', padding: '.2rem .5rem', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--card)', display: 'inline-flex', alignItems: 'center', gap: '.3rem' }}>
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                          Ver documento
+                        </a>
+                        <span style={{ fontSize: '.72rem', color: 'var(--text-light)', wordBreak: 'break-all' }}>{d.url}</span>
+                      </div>
+                    ) : (
+                      <span style={{ fontSize: '.8rem', color: 'var(--text-light)', fontStyle: 'italic' }}>Sin documento generado</span>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+            <div style={{ marginTop: '1.25rem', display: 'flex', justifyContent: 'flex-end' }}>
+              <button className="btn" onClick={() => setShowDocUrlsModal(false)}>Cerrar</button>
             </div>
           </div>
         </div>
