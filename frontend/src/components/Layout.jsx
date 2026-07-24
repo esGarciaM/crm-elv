@@ -5,7 +5,6 @@ import { useTheme } from '../context/ThemeContext';
 import EditProfileModal from './EditProfileModal';
 import {
   LayoutDashboard,
-  Users,
   ClipboardList,
   Handshake,
   Palette,
@@ -22,11 +21,12 @@ import {
   ChevronDown,
   Menu,
   FileCheck,
+  Kanban,
 } from 'lucide-react';
 
 const MODULE_ICONS = {
   dashboard: LayoutDashboard,
-  clients: Users,
+  kanban: Kanban,
   tasks: ClipboardList,
   patrocinios: Handshake,
   disenos: Palette,
@@ -41,7 +41,7 @@ const MODULE_ICONS = {
 
 const MODULE_ROUTES = {
   dashboard: '/',
-  clients: '/clients',
+  kanban: '/kanban',
   tasks: '/tasks',
   patrocinios: '/patrocinios',
   disenos: '/disenos',
@@ -56,7 +56,7 @@ const MODULE_ROUTES = {
 
 const MODULE_LABELS = {
   dashboard: 'Dashboard',
-  clients: 'Clientes',
+  kanban: 'Kanban',
   tasks: 'Tareas',
   patrocinios: 'Patrocinios',
   disenos: 'Diseños',

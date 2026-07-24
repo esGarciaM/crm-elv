@@ -117,7 +117,7 @@ export default function SeguimientoPatrocinio() {
     <div className="seguimiento-page">
       {/* ═══ Header ═══ */}
       <div className="page-header">
-        <button className="btn" onClick={() => navigate('/patrocinios')}>
+        <button className="btn" onClick={() => navigate(-1)}>
           ← Volver
         </button>
         <div style={{ flex: 1, marginLeft: '1rem' }}>

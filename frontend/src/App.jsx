@@ -6,8 +6,7 @@ import ModuleRoute from './components/ModuleRoute';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
-import Clients from './pages/Clients';
-import ClientDetail from './pages/ClientDetail';
+import Kanban from './pages/Kanban';
 import Tasks from './pages/Tasks';
 import Users from './pages/Users';
 import Finance from './pages/Finance';
@@ -42,8 +41,8 @@ function AppContent() {
     <Layout>
       <Routes>
         <Route path="/" element={<Dashboard />} />
-        <Route path="/clients" element={<ModuleRoute module="clients"><Clients /></ModuleRoute>} />
-        <Route path="/clients/:id" element={<ModuleRoute module="clients"><ClientDetail /></ModuleRoute>} />
+        <Route path="/kanban" element={<ModuleRoute module="kanban"><Kanban /></ModuleRoute>} />
+        <Route path="/kanban/:id/seguimiento" element={<ModuleRoute module="kanban"><SeguimientoPatrocinio /></ModuleRoute>} />
         <Route path="/tasks" element={<ModuleRoute module="tasks"><Tasks /></ModuleRoute>} />
         <Route path="/users" element={<PrivateRoute roles={['admin']}><Users /></PrivateRoute>} />
         <Route path="/finance" element={<ModuleRoute module="finance"><Finance /></ModuleRoute>} />
