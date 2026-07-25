@@ -112,13 +112,24 @@ router.get('/sponsorships', authMiddleware, (req, res) => {
     SELECT p.id, p.company_name, p.contact_person, p.phone,
            p.sponsorship_type, p.package, p.payment_status, p.payment_detail,
            p.visit_status, p.student_obtained, p.student_contacted,
+           COALESCE(
+             CASE WHEN p.monetary_amount IS NOT NULL AND p.monetary_amount != 0 THEN p.monetary_amount END,
+             CASE WHEN pk.type != 'especie' AND p.package NOT LIKE '% E %' THEN pk.amount END
+           ) as monetary_amount,
+           COALESCE(
+             CASE WHEN p.in_kind_amount IS NOT NULL AND p.in_kind_amount != 0 THEN p.in_kind_amount END,
+             CASE WHEN pk.type = 'especie' OR p.package LIKE '% E %' THEN pk.amount END
+           ) as in_kind_amount,
            p.created_at as date,
-           COALESCE(pp.total_paid, 0) as total_paid,
+           COALESCE(pp.total_paid_cash, 0) as total_paid_cash,
+           COALESCE(pp.total_paid_kind, 0) as total_paid_kind,
            COALESCE(pk.amount, 0) as package_amount,
            pk.type as package_type
     FROM patrocinios p
     LEFT JOIN (
-      SELECT patrocinio_id, SUM(amount) as total_paid
+      SELECT patrocinio_id,
+             SUM(CASE WHEN payment_method != 'Especie' THEN amount ELSE 0 END) as total_paid_cash,
+             SUM(CASE WHEN payment_method = 'Especie' THEN amount ELSE 0 END) as total_paid_kind
       FROM sponsorship_payments
       GROUP BY patrocinio_id
     ) pp ON pp.patrocinio_id = p.id
@@ -129,18 +140,16 @@ router.get('/sponsorships', authMiddleware, (req, res) => {
 
   let totalCash = 0;
   let totalKind = 0;
-  let totalMixed = 0;
   let totalPaid = 0;
+  let totalEspecie = 0;
   for (const p of rows) {
-    const amt = p.package_amount || 0;
-    const pkgType = (p.package_type || '').toLowerCase();
-    if (pkgType === 'mixto') totalMixed += amt;
-    else if (pkgType === 'monetario') totalCash += amt;
-    else if (pkgType === 'especie') totalKind += amt;
-    totalPaid += (p.total_paid || 0);
+    totalCash += (p.monetary_amount || 0);
+    totalKind += (p.in_kind_amount || 0);
+    totalPaid += (p.total_paid_cash || 0);
+    totalEspecie += (p.total_paid_kind || 0);
   }
 
-  res.json({ sponsorships: rows, totalCash, totalKind, totalMixed, totalPaid, totalGeneral: totalCash + totalKind + totalMixed });
+  res.json({ sponsorships: rows, totalCash, totalKind, totalPaid, totalEspecie, totalGeneral: totalCash + totalKind });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -156,11 +165,14 @@ router.get('/sponsorships/:id/payments', authMiddleware, (req, res) => {
     ORDER BY sp.payment_date DESC
   `).all(req.params.id);
 
-  const totalPaid = db.prepare(`
-    SELECT COALESCE(SUM(amount), 0) as total FROM sponsorship_payments WHERE patrocinio_id = ?
-  `).get(req.params.id).total;
+  const totals = db.prepare(`
+    SELECT
+      COALESCE(SUM(CASE WHEN payment_method != 'Especie' THEN amount ELSE 0 END), 0) as total_cash,
+      COALESCE(SUM(CASE WHEN payment_method = 'Especie' THEN amount ELSE 0 END), 0) as total_kind
+    FROM sponsorship_payments WHERE patrocinio_id = ?
+  `).get(req.params.id);
 
-  res.json({ payments, totalPaid });
+  res.json({ payments, totalCash: totals.total_cash, totalKind: totals.total_kind, totalPaid: totals.total_cash + totals.total_kind });
 });
 
 router.post('/sponsorships/:id/payments', authMiddleware, (req, res) => {
