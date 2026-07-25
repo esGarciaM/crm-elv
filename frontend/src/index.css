@@ -973,6 +973,7 @@ input, select, textarea, .search-input,
   color: var(--text-muted);
   font-style: italic;
   font-size: 0.82rem;
+  text-decoration: line-through;
 }
 
 .timeline-content.deleted {

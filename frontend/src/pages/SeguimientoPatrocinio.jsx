@@ -83,6 +83,23 @@ export default function SeguimientoPatrocinio() {
   const isAdmin = user?.role === 'admin';
   const canDelete = isAdmin;
 
+  // Colores predefinidos para usuarios en el timeline
+  const USER_COLORS = [
+    '#2196f3',  // azul
+    '#e91e63',  // rosa
+    '#4caf50',  // verde
+    '#ff9800',  // naranja
+    '#9c27b0',  // morado
+    '#00bcd4',  // cyan
+    '#fbc02d',  // amarillo
+    '#795548',  // café
+  ];
+
+  const getUserColor = (userId) => {
+    if (!userId) return USER_COLORS[0];
+    return USER_COLORS[userId % USER_COLORS.length];
+  };
+
   // ── Download attached file via axios (with auth) ──
   const handleDownload = async (c) => {
     if (!c.file_url) return;
@@ -240,12 +257,20 @@ export default function SeguimientoPatrocinio() {
             </div>
           ) : (
             <div className="timeline-entries">
-              {comments.map((c) => (
+              {comments.map((c) => {
+                const userColor = getUserColor(c.created_by);
+                return (
                 <div key={c.id} className="timeline-entry">
-                  <div className="timeline-dot" />
-                  <div className={`timeline-content ${c.deleted ? 'deleted' : ''}`}>
+                  <div className="timeline-dot" style={!c.deleted ? { background: userColor } : undefined} />
+                  <div
+                    className={`timeline-content ${c.deleted ? 'deleted' : ''}`}
+                    style={!c.deleted ? {
+                      borderLeft: `4px solid ${userColor}`,
+                      background: `color-mix(in srgb, ${userColor} 8%, transparent)`
+                    } : undefined}
+                  >
                     <div className="timeline-header">
-                      <strong>
+                      <strong style={!c.deleted ? { color: userColor } : undefined}>
                         {c.deleted
                           ? <span style={{ color: 'var(--text-light)' }}>Mensaje eliminado</span>
                           : (c.created_by_name || 'Usuario')
@@ -291,7 +316,8 @@ export default function SeguimientoPatrocinio() {
                     )}
                   </div>
                 </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
