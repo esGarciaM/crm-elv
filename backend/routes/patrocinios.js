@@ -91,12 +91,21 @@ router.get('/', authMiddleware, (req, res) => {
       creator.name AS created_by_name,
       editor.name AS updated_by_name,
       ss.name AS sponsor_status_name,
+      COALESCE(
+        CASE WHEN p.monetary_amount IS NOT NULL AND p.monetary_amount != 0 THEN p.monetary_amount END,
+        CASE WHEN pk.type != 'especie' AND p.package NOT LIKE '% E %' THEN pk.amount END
+      ) as monetary_amount,
+      COALESCE(
+        CASE WHEN p.in_kind_amount IS NOT NULL AND p.in_kind_amount != 0 THEN p.in_kind_amount END,
+        CASE WHEN pk.type = 'especie' OR p.package LIKE '% E %' THEN pk.amount END
+      ) as in_kind_amount,
       (SELECT COUNT(*) FROM package_checklist pc2 JOIN packages pk2 ON pk2.id = pc2.package_id WHERE pk2.name = p.package) AS checklist_total,
       (SELECT COUNT(*) FROM patrocinio_checklist ptcl2 WHERE ptcl2.patrocinio_id = p.id AND ptcl2.completed = 1) AS checklist_completed
     FROM patrocinios p
     LEFT JOIN users creator ON creator.id = p.created_by
     LEFT JOIN users editor ON editor.id = p.updated_by
     LEFT JOIN sponsor_statuses ss ON ss.id = p.sponsor_status_id
+    LEFT JOIN packages pk ON p.package = pk.name
     ${where}
     ORDER BY p.company_name
     LIMIT ? OFFSET ?
@@ -223,20 +232,34 @@ router.post('/', authMiddleware, (req, res) => {
     company_name, contact_person, phone, sponsorship_type, package: pkg,
     visit_status, payment_status, student_obtained, student_contacted,
     in_kind_detail, payment_detail, social_media_fulfilled, tickets_delivered,
-    logo_requested, notes
+    logo_requested, notes, monetary_amount, in_kind_amount
   } = req.body;
+
+  let finalMonetary = monetary_amount !== undefined && monetary_amount !== '' ? monetary_amount : null;
+  let finalInKind = in_kind_amount !== undefined && in_kind_amount !== '' ? in_kind_amount : null;
+
+  if (pkg && (finalMonetary === null || finalInKind === null)) {
+    const pkgRow = db.prepare('SELECT amount, type, name FROM packages WHERE name = ?').get(pkg);
+    if (pkgRow) {
+      const pkgType = (pkgRow.type || '').toLowerCase();
+      const isEspecie = pkgType === 'especie' || pkgRow.name.includes(' E ');
+      if (!isEspecie && finalMonetary === null) finalMonetary = pkgRow.amount || 0;
+      else if (isEspecie && finalInKind === null) finalInKind = pkgRow.amount || 0;
+    }
+  }
 
   const result = db.prepare(`
     INSERT INTO patrocinios (company_name, contact_person, phone, sponsorship_type, package,
       visit_status, payment_status, student_obtained, student_contacted,
       in_kind_detail, payment_detail, social_media_fulfilled, tickets_delivered,
-      logo_requested, notes, created_by)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      logo_requested, notes, created_by, monetary_amount, in_kind_amount)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     company_name || null, contact_person || null, phone || null, sponsorship_type || null, pkg || null,
     visit_status || null, payment_status || null, student_obtained || null, student_contacted || null,
     in_kind_detail || null, payment_detail || null, social_media_fulfilled || null, tickets_delivered || null,
-    logo_requested || null, notes || null, req.user.id
+    logo_requested || null, notes || null, req.user.id,
+    finalMonetary, finalInKind
   );
 
   res.status(201).json({ id: result.lastInsertRowid });
@@ -254,7 +277,7 @@ router.put('/:id', authMiddleware, (req, res) => {
     'company_name', 'contact_person', 'phone', 'sponsorship_type', 'package',
     'visit_status', 'payment_status', 'student_obtained', 'student_contacted',
     'in_kind_detail', 'payment_detail', 'social_media_fulfilled', 'tickets_delivered',
-    'logo_requested', 'notes', 'sponsor_status_id'
+    'logo_requested', 'notes', 'sponsor_status_id', 'monetary_amount', 'in_kind_amount'
   ];
 
   const updates = [];
@@ -263,6 +286,21 @@ router.put('/:id', authMiddleware, (req, res) => {
     if (req.body[f] !== undefined) {
       updates.push(`${f} = ?`);
       params.push(req.body[f] === '' ? null : req.body[f]);
+    }
+  }
+
+  if (req.body.package && (req.body.monetary_amount === undefined || req.body.in_kind_amount === undefined)) {
+    const pkgRow = db.prepare('SELECT amount, type, name FROM packages WHERE name = ?').get(req.body.package);
+    if (pkgRow) {
+      const pkgType = (pkgRow.type || '').toLowerCase();
+      const isEspecie = pkgType === 'especie' || pkgRow.name.includes(' E ');
+      if (!isEspecie && req.body.monetary_amount === undefined) {
+        updates.push('monetary_amount = ?');
+        params.push(pkgRow.amount || 0);
+      } else if (isEspecie && req.body.in_kind_amount === undefined) {
+        updates.push('in_kind_amount = ?');
+        params.push(pkgRow.amount || 0);
+      }
     }
   }
 

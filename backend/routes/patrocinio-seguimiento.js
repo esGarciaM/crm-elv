@@ -30,6 +30,7 @@ const router = express.Router();
 // ──────────────────────────────────────────────────
 router.get('/patrocinios/:id/seguimiento', authMiddleware, (req, res) => {
   const { id } = req.params;
+  const isAdmin = req.user.role === 'admin';
 
   const patrocinio = db.prepare('SELECT * FROM patrocinios WHERE id = ?').get(id);
   if (!patrocinio) return res.status(404).json({ error: 'Patrocinio no encontrado' });
@@ -59,14 +60,24 @@ router.get('/patrocinios/:id/seguimiento', authMiddleware, (req, res) => {
     }
   }
 
-  const comments = db.prepare(`
-    SELECT c.*, u.name as created_by_name, del.name as deleted_by_name
-    FROM patrocinio_comments c
-    LEFT JOIN users u ON u.id = c.created_by
-    LEFT JOIN users del ON del.id = c.deleted_by
-    WHERE c.patrocinio_id = ? AND (c.deleted = 0 OR c.deleted IS NULL)
-    ORDER BY c.created_at ASC
-  `).all(id);
+  // Admin ve todos los comentarios (incluidos eliminados), otros solo ven los activos
+  const comments = isAdmin
+    ? db.prepare(`
+        SELECT c.*, u.name as created_by_name, del.name as deleted_by_name
+        FROM patrocinio_comments c
+        LEFT JOIN users u ON u.id = c.created_by
+        LEFT JOIN users del ON del.id = c.deleted_by
+        WHERE c.patrocinio_id = ?
+        ORDER BY c.created_at DESC
+      `).all(id)
+    : db.prepare(`
+        SELECT c.*, u.name as created_by_name, del.name as deleted_by_name
+        FROM patrocinio_comments c
+        LEFT JOIN users u ON u.id = c.created_by
+        LEFT JOIN users del ON del.id = c.deleted_by
+        WHERE c.patrocinio_id = ? AND (c.deleted = 0 OR c.deleted IS NULL)
+        ORDER BY c.created_at DESC
+      `).all(id);
 
   res.json({ patrocinio, package: packageInfo, items, completedItemIds, comments });
 });

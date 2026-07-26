@@ -8,9 +8,50 @@ const router = Router();
 function sanitizeTemplate(body) {
   if (!body) return null;
   return sanitizeHtml(body, {
-    allowedTags: [],
-    allowedAttributes: {},
-    disallowedTagsMode: 'discard'
+    allowedTags: [
+      'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+      'p', 'br', 'strong', 'em', 'u', 's', 'sub', 'sup',
+      'ul', 'ol', 'li',
+      'table', 'thead', 'tbody', 'tr', 'th', 'td',
+      'img', 'a', 'span', 'div',
+      'blockquote', 'pre', 'code'
+    ],
+    allowedAttributes: {
+      'img': ['src', 'alt', 'width', 'height', 'style'],
+      'a': ['href', 'target', 'rel'],
+      'span': ['style'],
+      'div': ['style'],
+      'p': ['style'],
+      'td': ['colspan', 'rowspan', 'style'],
+      'th': ['colspan', 'rowspan', 'style'],
+      'h1': ['style'], 'h2': ['style'], 'h3': ['style'],
+      'h4': ['style'], 'h5': ['style'], 'h6': ['style'],
+      'strong': ['style'], 'em': ['style'], 'u': ['style'],
+      'ul': ['style'], 'ol': ['style'], 'li': ['style'],
+      'blockquote': ['style'], 'pre': ['style'], 'code': ['style']
+    },
+    allowedStyles: {
+      '*': {
+        'color': [/.*/],
+        'background-color': [/.*/],
+        'text-align': [/.*/],
+        'font-size': [/.*/],
+        'font-family': [/.*/],
+        'text-decoration': [/.*/],
+        'font-weight': [/.*/],
+        'font-style': [/.*/],
+        'margin': [/.*/],
+        'padding': [/.*/],
+        'border': [/.*/],
+        'border-radius': [/.*/],
+        'width': [/.*/],
+        'height': [/.*/],
+        'display': [/.*/],
+        'line-height': [/.*/]
+      }
+    },
+    disallowedTagsMode: 'discard',
+    allowedSchemes: ['http', 'https', 'mailto', 'data']
   });
 }
 

@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../api';
-import ComunicadoPatrocinio from '../components/ComunicadoPatrocinio';
 import SeguimientoSolicitud from '../components/SeguimientoSolicitud';
 
 const fmt = (n) => '$' + Number(n || 0).toLocaleString('es-MX', { minimumFractionDigits: 2 });
@@ -184,28 +183,13 @@ function TabMisSolicitudes() {
 }
 
 export default function MisSolicitudes() {
-  const [activeTab, setActiveTab] = useState('solicitudes');
-
-  const tabs = [
-    { key: 'solicitudes', label: 'Finanzas' },
-    { key: 'comunicados', label: 'Mis Comunicados' },
-  ];
-
   return (
     <div>
       <div className="page-header">
         <h1>Solicitudes</h1>
       </div>
-      <div className="page-tabs">
-        {tabs.map(t => (
-          <button key={t.key} className={activeTab === t.key ? 'active' : ''} onClick={() => setActiveTab(t.key)}>
-            {t.label}
-          </button>
-        ))}
-      </div>
       <div style={{ marginTop: '1.5rem' }}>
-        {activeTab === 'solicitudes' && <TabMisSolicitudes />}
-        {activeTab === 'comunicados' && <ComunicadoPatrocinio />}
+        <TabMisSolicitudes />
       </div>
     </div>
   );

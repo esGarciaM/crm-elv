@@ -38,12 +38,75 @@ function renderTemplate(template, patrocinio) {
   return html;
 }
 
-function markdownToSafeHtml(md) {
-  const rawHtml = marked.parse(md);
+const RICH_TEXT_ALLOWED_TAGS = [
+  'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+  'p', 'br', 'strong', 'em', 'u', 's', 'sub', 'sup',
+  'ul', 'ol', 'li',
+  'table', 'thead', 'tbody', 'tr', 'th', 'td',
+  'img', 'a', 'span', 'div',
+  'blockquote', 'pre', 'code'
+];
+
+const RICH_TEXT_ALLOWED_ATTRS = {
+  'img': ['src', 'alt', 'width', 'height', 'style'],
+  'a': ['href', 'target', 'rel'],
+  'span': ['style'],
+  'div': ['style'],
+  'p': ['style'],
+  'td': ['colspan', 'rowspan', 'style'],
+  'th': ['colspan', 'rowspan', 'style'],
+  'h1': ['style'], 'h2': ['style'], 'h3': ['style'],
+  'h4': ['style'], 'h5': ['style'], 'h6': ['style'],
+  'strong': ['style'], 'em': ['style'], 'u': ['style'],
+  'ul': ['style'], 'ol': ['style'], 'li': ['style'],
+  'blockquote': ['style'], 'pre': ['style'], 'code': ['style']
+};
+
+const RICH_TEXT_ALLOWED_STYLES = {
+  '*': {
+    'color': [/.*/],
+    'background-color': [/.*/],
+    'text-align': [/.*/],
+    'font-size': [/.*/],
+    'font-family': [/.*/],
+    'text-decoration': [/.*/],
+    'font-weight': [/.*/],
+    'font-style': [/.*/],
+    'margin': [/.*/],
+    'padding': [/.*/],
+    'border': [/.*/],
+    'border-radius': [/.*/],
+    'width': [/.*/],
+    'height': [/.*/],
+    'display': [/.*/],
+    'line-height': [/.*/]
+  }
+};
+
+function htmlToSafeHtml(input) {
+  const isHtml = /<[a-z][\s\S]*>/i.test(input);
+  if (isHtml) {
+    return sanitizeHtml(input, {
+      allowedTags: RICH_TEXT_ALLOWED_TAGS,
+      allowedAttributes: RICH_TEXT_ALLOWED_ATTRS,
+      allowedStyles: RICH_TEXT_ALLOWED_STYLES,
+      allowedSchemes: ['http', 'https', 'mailto', 'data']
+    });
+  }
+  const rawHtml = marked.parse(input);
   return sanitizeHtml(rawHtml, {
-    allowedTags: sanitizeHtml.defaults.allowedTags.concat(['h1', 'h2', 'h3', 'u', 'table', 'thead', 'tbody', 'tr', 'th', 'td']),
-    allowedAttributes: { ...sanitizeHtml.defaults.allowedAttributes, td: ['colspan'], th: ['colspan'] }
+    allowedTags: RICH_TEXT_ALLOWED_TAGS,
+    allowedAttributes: RICH_TEXT_ALLOWED_ATTRS,
+    allowedStyles: RICH_TEXT_ALLOWED_STYLES,
+    allowedSchemes: ['http', 'https', 'mailto', 'data']
   });
+}
+
+function stripDocTypeName(html, typeName) {
+  if (!typeName) return html;
+  const escaped = typeName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const re = new RegExp(`^\\s*<(h[1-6]|p)[^>]*>\\s*${escaped}\\s*</\\1>\\s*`, 'i');
+  return html.replace(re, '');
 }
 
 function wrapInDocument(bodyHtml, title) {
@@ -118,7 +181,7 @@ router.post('/:patrocinioId/generate', authMiddleware, (req, res) => {
   if (!patrocinio) return res.status(404).json({ error: 'Patrocinio no encontrado' });
 
   const filled = renderTemplate(docType.template_body, patrocinio);
-  const safeHtml = markdownToSafeHtml(filled);
+  const safeHtml = stripDocTypeName(htmlToSafeHtml(filled), docType.name);
   const fullHtml = wrapInDocument(safeHtml, docType.name);
 
   const filename = `${req.params.patrocinioId}_${document_type_id}.html`;
@@ -145,11 +208,7 @@ router.put('/:patrocinioId/regenerate', authMiddleware, (req, res) => {
   const patrocinio = db.prepare('SELECT id FROM patrocinios WHERE id = ?').get(req.params.patrocinioId);
   if (!patrocinio) return res.status(404).json({ error: 'Patrocinio no encontrado' });
 
-  const safeHtml = sanitizeHtml(html, {
-    allowedTags: sanitizeHtml.defaults.allowedTags.concat(['h1', 'h2', 'h3', 'u', 'table', 'thead', 'tbody', 'tr', 'th', 'td', 'style']),
-    allowedAttributes: { ...sanitizeHtml.defaults.allowedAttributes, td: ['colspan'], th: ['colspan'] },
-    allowedStyles: { '*': { 'font-family': [/.*/], 'text-align': [/.*/] } }
-  });
+  const safeHtml = htmlToSafeHtml(html);
 
   const fullHtml = wrapInDocument(safeHtml, 'Documento');
 

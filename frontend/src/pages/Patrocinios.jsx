@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import api from '../api/index.js';
+import ComunicadoPatrocinio from '../components/ComunicadoPatrocinio';
 
 const KANBAN_PALETTES = {
   light: [
@@ -64,7 +65,7 @@ export default function Patrocinios() {
     company_name: '', contact_person: '', phone: '', sponsorship_type: '', package: '',
     visit_status: '', payment_status: '', student_obtained: '', student_contacted: '',
     in_kind_detail: '', payment_detail: '', social_media_fulfilled: '', tickets_delivered: '',
-    logo_requested: '', notes: ''
+    logo_requested: '', notes: '', monetary_amount: '', in_kind_amount: ''
   });
   const [packages, setPackages] = useState([]);
   const [sponsorStatuses, setSponsorStatuses] = useState([]);
@@ -80,8 +81,8 @@ export default function Patrocinios() {
     loadPackages();
     loadSponsorStatuses();
     api.get('/document-types').then(r => setDocTypes(r.data));
-    if (viewMode === 'list') loadPatrocinios();
-    else loadKanban();
+    if (viewMode === 'kanban') loadKanban();
+    else loadPatrocinios();
   }, [page, search, viewMode]);
 
   const loadPatrocinios = async () => {
@@ -155,7 +156,7 @@ export default function Patrocinios() {
       company_name: '', contact_person: '', phone: '', sponsorship_type: '', package: '',
       visit_status: '', payment_status: '', student_obtained: '', student_contacted: '',
       in_kind_detail: '', payment_detail: '', social_media_fulfilled: '', tickets_delivered: '',
-      logo_requested: '', notes: ''
+      logo_requested: '', notes: '', monetary_amount: '', in_kind_amount: ''
     });
     setError('');
     setShowCreateModal(true);
@@ -179,7 +180,9 @@ export default function Patrocinios() {
       tickets_delivered: p.tickets_delivered || '',
       logo_requested: p.logo_requested || '',
       notes: p.notes || '',
-      sponsor_status_id: p.sponsor_status_id || ''
+      sponsor_status_id: p.sponsor_status_id || '',
+      monetary_amount: p.monetary_amount || '',
+      in_kind_amount: p.in_kind_amount || ''
     });
     setError('');
     setShowCreateModal(true);
@@ -242,6 +245,7 @@ export default function Patrocinios() {
       <div className="finance-tabs" style={{ marginBottom: '1.5rem' }}>
         <button className={`finance-tab ${viewMode === 'list' ? 'active' : ''}`} onClick={() => setViewMode('list')}>Lista</button>
         <button className={`finance-tab ${viewMode === 'kanban' ? 'active' : ''}`} onClick={() => setViewMode('kanban')}>Kanban</button>
+        <button className={`finance-tab ${viewMode === 'comunicados' ? 'active' : ''}`} onClick={() => setViewMode('comunicados')}>Comunicados</button>
       </div>
 
       {viewMode === 'list' && (
@@ -257,6 +261,8 @@ export default function Patrocinios() {
                   <th>Empresa</th>
                   <th>Contacto</th>
                   <th>Paquete</th>
+                  <th>Monto Monetario</th>
+                  <th>Monto Especie</th>
                   <th>Estatus</th>
                   <th>Tipo</th>
                   <th>Pago</th>
@@ -269,6 +275,8 @@ export default function Patrocinios() {
                     <td><strong>{p.company_name}</strong></td>
                     <td>{p.contact_person}</td>
                     <td>{p.package || '—'}</td>
+                    <td style={{ color: p.monetary_amount > 0 ? 'var(--success)' : 'var(--text-muted)', fontWeight: p.monetary_amount > 0 ? 600 : 400 }}>{p.monetary_amount > 0 ? `$${Number(p.monetary_amount).toLocaleString('es-MX', { minimumFractionDigits: 2 })}` : '—'}</td>
+                    <td style={{ color: p.in_kind_amount > 0 ? 'var(--warning)' : 'var(--text-muted)', fontWeight: p.in_kind_amount > 0 ? 600 : 400 }}>{p.in_kind_amount > 0 ? `$${Number(p.in_kind_amount).toLocaleString('es-MX', { minimumFractionDigits: 2 })}` : '—'}</td>
                     <td><span className="status-badge info">{p.sponsor_status_name || 'Sin estatus'}</span></td>
                     <td><span className="status-badge">{p.sponsorship_type || '—'}</span></td>
                     <td><span className={`status-badge ${p.payment_status === 'Pagado' ? 'success' : p.payment_status === 'Cancelado' ? 'danger' : ''}`}>{p.payment_status || 'Pendiente'}</span></td>
@@ -473,6 +481,10 @@ export default function Patrocinios() {
         </div>
       )}
 
+      {viewMode === 'comunicados' && (
+        <ComunicadoPatrocinio />
+      )}
+
       {showCreateModal && (
         <div className="modal-overlay" onClick={() => setShowCreateModal(false)}>
           <div className="modal large-modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '800px', maxHeight: '85vh', overflowY: 'auto' }}>
@@ -505,6 +517,19 @@ export default function Patrocinios() {
                   <option value="Pendiente">Pendiente</option>
                 </select>
               </div>
+
+              {formData.sponsorship_type === 'Especie/Monetario' && (
+                <>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>Cantidad Monetaria ($)</label>
+                    <input type="number" placeholder="0.00" min="0" step="0.01" value={formData.monetary_amount} onChange={e => setFormData({ ...formData, monetary_amount: e.target.value })} />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>Cantidad en Especie ($)</label>
+                    <input type="number" placeholder="0.00" min="0" step="0.01" value={formData.in_kind_amount} onChange={e => setFormData({ ...formData, in_kind_amount: e.target.value })} />
+                  </div>
+                </>
+              )}
               
               <div>
                 <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>Estatus</label>
@@ -518,7 +543,25 @@ export default function Patrocinios() {
               
               <div style={{ gridColumn: 'span 2' }}>
                 <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>Paquete</label>
-                <select value={formData.package} onChange={e => setFormData({ ...formData, package: e.target.value })}>
+                <select value={formData.package} onChange={e => {
+                  const pkgName = e.target.value;
+                  const selected = packages.find(p => p.name === pkgName);
+                  const pkgType = selected?.type?.toLowerCase() || '';
+                  const pkgAmount = selected?.amount || 0;
+                  const isEspecie = pkgType === 'especie' || pkgName.includes(' E ');
+                  const patch = { package: pkgName };
+                  if (!isEspecie && pkgType !== 'mixto') {
+                    patch.monetary_amount = pkgAmount;
+                    patch.in_kind_amount = '';
+                  } else if (isEspecie && pkgType !== 'mixto') {
+                    patch.in_kind_amount = pkgAmount;
+                    patch.monetary_amount = '';
+                  } else if (pkgType === 'mixto') {
+                    patch.monetary_amount = pkgAmount;
+                    patch.in_kind_amount = pkgAmount;
+                  }
+                  setFormData({ ...formData, ...patch });
+                }}>
                   <option value="">— Seleccionar paquete —</option>
                   {packages.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
                 </select>

@@ -232,7 +232,7 @@ function TabAportaciones() {
 // TAB: PATROCINIOS (vista financiera)
 // ═══════════════════════════════════════════════════════════════════════════
 function TabPatrocinios() {
-  const [data, setData] = useState({ sponsorships: [], totalCash: 0, totalKind: 0, totalMixed: 0, totalPaid: 0, totalGeneral: 0 });
+  const [data, setData] = useState({ sponsorships: [], totalCash: 0, totalKind: 0, totalPaid: 0, totalEspecie: 0, totalGeneral: 0 });
   const [filters, setFilters] = useState({
     sponsorship_type: '', payment_status: '', visit_status: '',
     student_obtained: '', student_contacted: '', q: ''
@@ -243,7 +243,7 @@ function TabPatrocinios() {
     amount: '', payment_date: new Date().toISOString().split('T')[0],
     payment_method: '', reference: '', notes: ''
   });
-  const [paymentHistory, setPaymentHistory] = useState({ payments: [], totalPaid: 0 });
+  const [paymentHistory, setPaymentHistory] = useState({ payments: [], totalCash: 0, totalKind: 0, totalPaid: 0 });
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [error, setError] = useState('');
 
@@ -333,21 +333,37 @@ function TabPatrocinios() {
           <span className="stat-num">{fmt(data.totalKind)}</span>
           <span className="stat-label">Total en Especie</span>
         </div>
-        <div className="stat-card" style={{ borderLeftColor: 'var(--accent, #8b5cf6)' }}>
-          <span className="stat-num">{fmt(data.totalMixed)}</span>
-          <span className="stat-label">Total Mixto</span>
-        </div>
         <div className="stat-card info">
           <span className="stat-num">{fmt(data.totalGeneral)}</span>
           <span className="stat-label">Total General</span>
         </div>
+      </div>
+      <div className="stats-grid" style={{ marginBottom: '2rem' }}>
         <div className="stat-card success">
           <span className="stat-num">{fmt(data.totalPaid)}</span>
-          <span className="stat-label">Total Pagado</span>
+          <span className="stat-label">Total Pagado (Efectivo)</span>
         </div>
-        <div className="stat-card danger">
-          <span className="stat-num">{fmt(Math.max(0, data.totalGeneral - data.totalPaid))}</span>
-          <span className="stat-label">Por Pagar</span>
+        <div className="stat-card warning">
+          <span className="stat-num">{fmt(data.totalEspecie)}</span>
+          <span className="stat-label">Total Pagado (Especie)</span>
+        </div>
+        <div className="stat-card info">
+          <span className="stat-num">{fmt(data.totalPaid + data.totalEspecie)}</span>
+          <span className="stat-label">Suma Total Pagado</span>
+        </div>
+      </div>
+      <div className="stats-grid" style={{ marginBottom: '2rem' }}>
+        <div className="stat-card success">
+          <span className="stat-num">{fmt(Math.max(0, data.totalCash - data.totalPaid))}</span>
+          <span className="stat-label">Por Pagar Efectivo</span>
+        </div>
+        <div className="stat-card warning">
+          <span className="stat-num">{fmt(Math.max(0, data.totalKind - data.totalEspecie))}</span>
+          <span className="stat-label">Por Pagar Especie</span>
+        </div>
+        <div className="stat-card info">
+          <span className="stat-num">{fmt(Math.max(0, data.totalGeneral - data.totalPaid - data.totalEspecie))}</span>
+          <span className="stat-label">Por Pagar Total</span>
         </div>
       </div>
 
@@ -401,7 +417,7 @@ function TabPatrocinios() {
         ) : (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Fecha</th><th>Empresa</th><th>Contacto</th><th>Tipo</th><th>Paquete</th><th>Estado Pago</th><th>Pagado</th><th>Visita</th><th>Acciones</th></tr></thead>
+              <thead><tr><th>Fecha</th><th>Empresa</th><th>Contacto</th><th>Tipo</th><th>Paquete</th><th>Monto Monetario</th><th>Monto Especie</th><th>Estado Pago</th><th>Pagado Efectivo</th><th>Pagado Especie</th><th>Visita</th><th>Acciones</th></tr></thead>
               <tbody>
                 {data.sponsorships.map(p => (
                   <tr key={p.id}>
@@ -410,8 +426,11 @@ function TabPatrocinios() {
                     <td>{p.contact_person || '—'}</td>
                     <td><span className={`status-badge ${p.sponsorship_type?.toLowerCase().includes('especie') ? 'pending' : 'completed'}`}>{p.sponsorship_type || '—'}</span></td>
                     <td>{p.package || '—'}</td>
-                    <td><span className={`status-badge ${p.payment_status?.toLowerCase()}`}>{p.payment_status || 'Pendiente'}</span></td>
-                    <td style={{ color: p.total_paid > 0 ? 'var(--success)' : 'var(--text-muted)', fontWeight: p.total_paid > 0 ? 600 : 400 }}>{fmt(p.total_paid)}</td>
+                    <td style={{ color: p.monetary_amount > 0 ? 'var(--success)' : 'var(--text-muted)', fontWeight: p.monetary_amount > 0 ? 600 : 400 }}>{fmt(p.monetary_amount)}</td>
+                    <td style={{ color: p.in_kind_amount > 0 ? 'var(--warning)' : 'var(--text-muted)', fontWeight: p.in_kind_amount > 0 ? 600 : 400 }}>{fmt(p.in_kind_amount)}</td>
+                    <td><span className={`status-badge ${(p.payment_status || 'Pendiente').charAt(0).toUpperCase() + (p.payment_status || 'Pendiente').slice(1)}`}>{p.payment_status || 'Pendiente'}</span></td>
+                    <td style={{ color: p.total_paid_cash > 0 ? 'var(--success)' : 'var(--text-muted)', fontWeight: p.total_paid_cash > 0 ? 600 : 400 }}>{fmt(p.total_paid_cash)}</td>
+                    <td style={{ color: p.total_paid_kind > 0 ? 'var(--warning)' : 'var(--text-muted)', fontWeight: p.total_paid_kind > 0 ? 600 : 400 }}>{fmt(p.total_paid_kind)}</td>
                     <td>{p.visit_status || '—'}</td>
                     <td>
                       <div className="actions-cell">
@@ -443,6 +462,7 @@ function TabPatrocinios() {
                   <option value="Transferencia">Transferencia</option>
                   <option value="Cheque">Cheque</option>
                   <option value="Tarjeta">Tarjeta</option>
+                  <option value="Especie">Especie</option>
                   <option value="Otro">Otro</option>
                 </select>
                 <input placeholder="Referencia / Folio" value={paymentForm.reference} onChange={e => setPaymentForm({ ...paymentForm, reference: e.target.value })} />
@@ -462,9 +482,10 @@ function TabPatrocinios() {
         <div className="modal-overlay" onClick={() => setShowHistoryModal(false)}>
           <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 700 }}>
             <h2>Historial de Pagos - {selectedPatrocinio.company_name}</h2>
-            <div style={{ marginBottom: '1rem', padding: '.75rem', background: 'var(--bg-secondary)', borderRadius: 'var(--radius)' }}>
-              <strong>Total Pagado: </strong>
-              <span style={{ color: 'var(--success)', fontSize: '1.1rem' }}>{fmt(paymentHistory.totalPaid)}</span>
+            <div style={{ marginBottom: '1rem', padding: '.75rem', background: 'var(--bg-secondary)', borderRadius: 'var(--radius)', display: 'flex', gap: '1.5rem' }}>
+              <div><strong>Efectivo: </strong><span style={{ color: 'var(--success)', fontSize: '1.1rem' }}>{fmt(paymentHistory.totalCash)}</span></div>
+              <div><strong>Especie: </strong><span style={{ color: 'var(--warning)', fontSize: '1.1rem' }}>{fmt(paymentHistory.totalKind)}</span></div>
+              <div><strong>Total: </strong><span style={{ color: 'var(--text)', fontSize: '1.1rem' }}>{fmt(paymentHistory.totalPaid)}</span></div>
             </div>
             {paymentHistory.payments.length === 0 ? (
               <p className="empty-state">No hay pagos registrados</p>
