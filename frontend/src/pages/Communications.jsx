@@ -337,7 +337,7 @@ export default function Communications() {
                         <td>{p.contact_person || '—'}</td>
                         <td><span className={`status-badge ${p.sponsorship_type?.toLowerCase().includes('especie') ? 'pending' : 'completed'}`}>{p.sponsorship_type || '—'}</span></td>
                         <td>{p.package || '—'}</td>
-                        <td><span className={`status-badge ${p.payment_status?.toLowerCase()}`}>{p.payment_status || 'Pendiente'}</span></td>
+                        <td><span className={`status-badge ${(p.payment_status || 'Pendiente').charAt(0).toUpperCase() + (p.payment_status || 'Pendiente').slice(1)}`}>{p.payment_status || 'Pendiente'}</span></td>
                         <td style={{ color: p.total_paid > 0 ? 'var(--success)' : 'var(--text-muted)', fontWeight: p.total_paid > 0 ? 600 : 400 }}>{fmt(p.total_paid)}</td>
                         <td>{p.visit_status || '—'}</td>
                         <td>

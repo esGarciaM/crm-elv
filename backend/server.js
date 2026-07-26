@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import authRoutes from './routes/auth.js';
 import clientRoutes from './routes/clients.js';
 import taskRoutes from './routes/tasks.js';
@@ -26,11 +28,17 @@ import { authMiddleware } from './middleware/auth.js';
 import db from './database.js';
 import bcrypt from 'bcryptjs';
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 app.use(cors());
 app.use(express.json());
+
+// Serve uploaded files as static resources (images, documents, etc.)
+app.use('/uploads', express.static(join(__dirname, 'uploads')));
 
 // Seed default admin user if none exists
 const adminExists = db.prepare('SELECT id FROM users WHERE username = ?').get('admin');
@@ -191,3 +199,11 @@ app.get('/api/stats', (req, res) => {
 app.listen(PORT, () => {
   console.log(`CRM Backend running on http://localhost:${PORT}`);
 });
+
+const shutdown = () => {
+  console.log('Cerrando conexion a la base de datos...');
+  db.close();
+  process.exit(0);
+};
+process.on('SIGTERM', shutdown);
+process.on('SIGINT', shutdown);

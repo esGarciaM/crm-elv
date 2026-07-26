@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 import api from '../api/index.js';
+import ComunicadoPatrocinio from '../components/ComunicadoPatrocinio';
 
 const KANBAN_PALETTES = {
   light: [
@@ -80,8 +81,8 @@ export default function Patrocinios() {
     loadPackages();
     loadSponsorStatuses();
     api.get('/document-types').then(r => setDocTypes(r.data));
-    if (viewMode === 'list') loadPatrocinios();
-    else loadKanban();
+    if (viewMode === 'kanban') loadKanban();
+    else loadPatrocinios();
   }, [page, search, viewMode]);
 
   const loadPatrocinios = async () => {
@@ -244,6 +245,7 @@ export default function Patrocinios() {
       <div className="finance-tabs" style={{ marginBottom: '1.5rem' }}>
         <button className={`finance-tab ${viewMode === 'list' ? 'active' : ''}`} onClick={() => setViewMode('list')}>Lista</button>
         <button className={`finance-tab ${viewMode === 'kanban' ? 'active' : ''}`} onClick={() => setViewMode('kanban')}>Kanban</button>
+        <button className={`finance-tab ${viewMode === 'comunicados' ? 'active' : ''}`} onClick={() => setViewMode('comunicados')}>Comunicados</button>
       </div>
 
       {viewMode === 'list' && (
@@ -477,6 +479,10 @@ export default function Patrocinios() {
             );
           })}
         </div>
+      )}
+
+      {viewMode === 'comunicados' && (
+        <ComunicadoPatrocinio />
       )}
 
       {showCreateModal && (

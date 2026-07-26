@@ -428,7 +428,7 @@ function TabPatrocinios() {
                     <td>{p.package || '—'}</td>
                     <td style={{ color: p.monetary_amount > 0 ? 'var(--success)' : 'var(--text-muted)', fontWeight: p.monetary_amount > 0 ? 600 : 400 }}>{fmt(p.monetary_amount)}</td>
                     <td style={{ color: p.in_kind_amount > 0 ? 'var(--warning)' : 'var(--text-muted)', fontWeight: p.in_kind_amount > 0 ? 600 : 400 }}>{fmt(p.in_kind_amount)}</td>
-                    <td><span className={`status-badge ${p.payment_status?.toLowerCase()}`}>{p.payment_status || 'Pendiente'}</span></td>
+                    <td><span className={`status-badge ${(p.payment_status || 'Pendiente').charAt(0).toUpperCase() + (p.payment_status || 'Pendiente').slice(1)}`}>{p.payment_status || 'Pendiente'}</span></td>
                     <td style={{ color: p.total_paid_cash > 0 ? 'var(--success)' : 'var(--text-muted)', fontWeight: p.total_paid_cash > 0 ? 600 : 400 }}>{fmt(p.total_paid_cash)}</td>
                     <td style={{ color: p.total_paid_kind > 0 ? 'var(--warning)' : 'var(--text-muted)', fontWeight: p.total_paid_kind > 0 ? 600 : 400 }}>{fmt(p.total_paid_kind)}</td>
                     <td>{p.visit_status || '—'}</td>

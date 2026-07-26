@@ -23,5 +23,10 @@ backend/uploads/*
 # Database backups
 backup_data/
 
+# SQLite database files
+backend/*.db
+backend/*.db-shm
+backend/*.db-wal
+
 # Docker volumes
 *.log

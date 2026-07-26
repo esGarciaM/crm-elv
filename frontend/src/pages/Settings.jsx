@@ -1,5 +1,37 @@
 import { useState, useEffect } from 'react';
+import ReactQuill from 'react-quill-new';
+import 'react-quill-new/dist/quill.snow.css';
+import Quill from 'quill';
+import ImageResize from '@mgreminger/quill-image-resize-module';
 import api from '../api';
+
+Quill.register('modules/imageResize', ImageResize);
+
+const QUILL_MODULES = {
+  imageResize: {},
+  toolbar: [
+    [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+    [{ 'font': [] }],
+    [{ 'size': ['small', false, 'large', 'huge'] }],
+    ['bold', 'italic', 'underline', 'strike'],
+    [{ 'color': [] }, { 'background': [] }],
+    [{ 'align': [] }],
+    ['blockquote', 'code-block'],
+    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+    [{ 'indent': '-1' }, { 'indent': '+1' }],
+    ['link', 'image'],
+    ['clean']
+  ]
+};
+
+const QUILL_FORMATS = [
+  'header', 'font', 'size',
+  'bold', 'italic', 'underline', 'strike',
+  'color', 'background', 'align',
+  'blockquote', 'code-block',
+  'list', 'bullet', 'indent',
+  'link', 'image'
+];
 
 const TABS = [
   { key: 'departments', label: 'Departamentos' },
@@ -826,7 +858,7 @@ export default function Settings() {
 
       {showDocTypeModal && (
         <div className="modal-overlay" onClick={() => setShowDocTypeModal(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 640 }}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 800 }}>
             <h2>{editingId ? 'Editar' : 'Nuevo'} Tipo de Documento</h2>
             {error && <div className="error-msg">{error}</div>}
             <div className="form-grid">
@@ -839,14 +871,17 @@ export default function Settings() {
 
             {docTypeForm.is_client && (
               <div style={{ marginTop: '1rem' }}>
-                <label style={{ display: 'block', fontWeight: 600, marginBottom: '.35rem' }}>Plantilla del documento (Markdown)</label>
-                <textarea
-                  value={docTypeForm.template_body}
-                  onChange={e => setDocTypeForm({ ...docTypeForm, template_body: e.target.value })}
-                  rows={10}
-                  placeholder="# Título del documento&#10;&#10;Estimado/a **{{Contacto}}**,&#10;&#10;Por medio de la presente, **{{Nombre}}** confirma su patrocinio...&#10;&#10;Estado de pago: **{{EstadoPago}}**"
-                  style={{ width: '100%', fontFamily: 'monospace', fontSize: '.85rem', padding: '.75rem', border: '1px solid var(--border)', borderRadius: '6px', resize: 'vertical', boxSizing: 'border-box' }}
-                />
+                <label style={{ display: 'block', fontWeight: 600, marginBottom: '.35rem' }}>Plantilla del documento</label>
+                <div className="quill-editor-wrapper">
+                  <ReactQuill
+                    theme="snow"
+                    value={docTypeForm.template_body || ''}
+                    onChange={(value) => setDocTypeForm({ ...docTypeForm, template_body: value })}
+                    modules={QUILL_MODULES}
+                    formats={QUILL_FORMATS}
+                    placeholder="Escribe el contenido de la plantilla..."
+                  />
+                </div>
                 <div style={{ marginTop: '.5rem', padding: '.65rem .85rem', background: 'var(--bg-secondary)', borderRadius: '6px', border: '1px solid var(--border)' }}>
                   <div style={{ fontSize: '.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: '.4rem' }}>
                     Variables disponibles (clic para copiar)
