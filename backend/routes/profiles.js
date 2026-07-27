@@ -9,6 +9,7 @@ const AVAILABLE_MODULES = [
   { key: 'clients', label: 'Clientes' },
   { key: 'tasks', label: 'Tareas' },
   { key: 'patrocinios', label: 'Patrocinios' },
+  { key: 'kanban', label: 'Kanban' },
   { key: 'disenos', label: 'Diseños' },
   { key: 'redes', label: 'Redes' },
   { key: 'logistica', label: 'Logística' },
