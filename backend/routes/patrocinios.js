@@ -197,6 +197,9 @@ router.get('/stats', authMiddleware, (req, res) => {
 
 // ─── PUT /kanban/status — Actualizar status de patrocinio (Drag & Drop) ──
 router.put('/kanban/status', authMiddleware, (req, res) => {
+  if (req.user.role === 'viewer' || req.user.role === 'client') {
+    return res.status(403).json({ error: 'No tienes permiso para mover tarjetas' });
+  }
   const { patrocinio_id, sponsor_status_id } = req.body;
   if (!patrocinio_id || !sponsor_status_id) return res.status(400).json({ error: 'patrocinio_id y sponsor_status_id requeridos' });
 

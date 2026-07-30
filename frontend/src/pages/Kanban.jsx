@@ -53,6 +53,8 @@ export default function Kanban() {
   const [kanbanData, setKanbanData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [hoveredCardId, setHoveredCardId] = useState(null);
+  const [draggedCard, setDraggedCard] = useState(null);
+  const [dragOverColId, setDragOverColId] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -71,10 +73,89 @@ export default function Kanban() {
     }
   };
 
+  const handleDragStart = (e, patrocinioId, sourceColId) => {
+    setDraggedCard(patrocinioId);
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', JSON.stringify({ patrocinioId, sourceColId }));
+    e.currentTarget.style.opacity = '0.5';
+  };
+
+  const handleDragEnd = (e) => {
+    e.currentTarget.style.opacity = '1';
+    setDraggedCard(null);
+    setDragOverColId(null);
+  };
+
+  const handleDragOver = (e, colId) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOverColId(colId);
+  };
+
+  const handleDragLeave = (e, colId) => {
+    if (dragOverColId === colId) setDragOverColId(null);
+  };
+
+  const handleDrop = async (e, targetColId) => {
+    e.preventDefault();
+    setDragOverColId(null);
+    const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+    const { patrocinioId, sourceColId } = data;
+
+    if (sourceColId === targetColId) return;
+
+    const col = kanbanData.find(c => c.id === sourceColId);
+    const patrocinio = col?.patrocinios.find(p => p.id === patrocinioId);
+    if (!patrocinio) return;
+
+    const prevData = kanbanData;
+
+    const next = kanbanData.map(c => {
+      if (c.id === sourceColId) {
+        return { ...c, patrocinios: c.patrocinios.filter(p => p.id !== patrocinioId) };
+      }
+      if (c.id === targetColId) {
+        return { ...c, patrocinios: [...c.patrocinios, { ...patrocinio, sponsor_status_id: targetColId }] };
+      }
+      return c;
+    });
+    setKanbanData(next);
+
+    try {
+      await api.put('/patrocinios/kanban/status', {
+        patrocinio_id: patrocinioId,
+        sponsor_status_id: targetColId
+      });
+    } catch {
+      setKanbanData(prevData);
+    }
+  };
+
   if (loading) return <div>Cargando...</div>;
 
   const colors = KANBAN_PALETTES[theme] || KANBAN_PALETTES.light;
   const isDark = theme === 'dark' || theme === 'neon';
+
+  let clickStartPos = null;
+  let hasDragged = false;
+
+  const handleMouseDown = (e) => {
+    clickStartPos = { x: e.clientX, y: e.clientY };
+    hasDragged = false;
+  };
+
+  const handleMouseMove = (e) => {
+    if (!clickStartPos) return;
+    const dx = e.clientX - clickStartPos.x;
+    const dy = e.clientY - clickStartPos.y;
+    if (Math.abs(dx) > 5 || Math.abs(dy) > 5) hasDragged = true;
+  };
+
+  const handleMouseUp = (patrocinioId) => {
+    if (!hasDragged) navigate(`/kanban/${patrocinioId}/seguimiento`);
+    clickStartPos = null;
+    hasDragged = false;
+  };
 
   return (
     <div>
@@ -100,10 +181,14 @@ export default function Kanban() {
       >
         {kanbanData.map((col, colIndex) => {
           const color = colors[colIndex % colors.length];
+          const isDragOver = dragOverColId === col.id;
           return (
             <div
               key={col.id}
               className="kanban-column"
+              onDragOver={(e) => handleDragOver(e, col.id)}
+              onDragLeave={(e) => handleDragLeave(e, col.id)}
+              onDrop={(e) => handleDrop(e, col.id)}
               style={{
                 minWidth: '300px',
                 width: '300px',
@@ -115,10 +200,15 @@ export default function Kanban() {
                 borderRight: `1px solid ${color.border}${theme === 'light' ? '30' : '22'}`,
                 borderBottom: `1px solid ${color.border}${theme === 'light' ? '30' : '22'}`,
                 borderLeft: `3px solid ${color.border}`,
-                boxShadow: isDark
-                  ? `0 0 20px ${color.glow}18, 0 4px 24px rgba(0,0,0,0.5)`
-                  : `0 1px 6px rgba(0,0,0,0.06)`,
-                overflow: 'hidden'
+                boxShadow: isDragOver
+                  ? `0 0 30px ${color.glow}44, inset 0 0 40px ${color.glow}0c`
+                  : isDark
+                    ? `0 0 20px ${color.glow}18, 0 4px 24px rgba(0,0,0,0.5)`
+                    : `0 1px 6px rgba(0,0,0,0.06)`,
+                outline: isDragOver ? `2px dashed ${color.border}` : 'none',
+                outlineOffset: '-3px',
+                overflow: 'hidden',
+                transition: 'box-shadow 0.15s ease'
               }}
             >
               <div style={{
@@ -191,45 +281,63 @@ export default function Kanban() {
                 )}
                 {col.patrocinios.map(p => {
                   const isHovered = hoveredCardId === p.id;
+                  const isDragging = draggedCard === p.id;
                   return (
                     <div
                       key={p.id}
+                      draggable
                       onMouseEnter={() => setHoveredCardId(p.id)}
                       onMouseLeave={() => setHoveredCardId(null)}
+                      onMouseDown={handleMouseDown}
+                      onMouseMove={handleMouseMove}
+                      onMouseUp={() => handleMouseUp(p.id)}
+                      onDragStart={(e) => handleDragStart(e, p.id, col.id)}
+                      onDragEnd={handleDragEnd}
                       className="kanban-card"
                       style={{
-                        cursor: 'pointer',
+                        cursor: 'grab',
                         padding: '0.85rem 1rem',
-                        background: isHovered
-                          ? (isDark
-                              ? `linear-gradient(135deg, ${color.cardBg}ee, ${color.cardBg}dd)`
-                              : `linear-gradient(135deg, ${color.cardBg}, ${color.bg.replace('0.08', '0.04')})`)
-                          : color.cardBg,
+                        background: isDragging
+                          ? color.cardBg
+                          : isHovered
+                            ? (isDark
+                                ? `linear-gradient(135deg, ${color.cardBg}ee, ${color.cardBg}dd)`
+                                : `linear-gradient(135deg, ${color.cardBg}, ${color.bg.replace('0.08', '0.04')})`)
+                            : color.cardBg,
                         borderRadius: '10px',
                         borderTop: `1px solid ${color.border}${isHovered ? '44' : '15'}`,
                         borderRight: `1px solid ${color.border}${isHovered ? '44' : '15'}`,
                         borderBottom: `1px solid ${color.border}${isHovered ? '44' : '15'}`,
                         borderLeft: `3px solid ${color.border}`,
-                        boxShadow: isHovered
+                        boxShadow: isDragging
                           ? (isDark
-                              ? `0 0 24px ${color.glow}30, 0 6px 16px rgba(0,0,0,0.5), inset 0 0 30px ${color.glow}08`
-                              : `0 4px 16px ${color.glow}, 0 1px 4px rgba(0,0,0,0.08)`)
-                          : (isDark
-                              ? '0 2px 8px rgba(0,0,0,0.35)'
-                              : '0 1px 4px rgba(0,0,0,0.06)'),
-                        transform: isHovered ? 'translateY(-2px) scale(1.01)' : 'none',
-                        transition: 'all 0.2s ease'
+                              ? `0 0 30px ${color.glow}40, 0 8px 24px rgba(0,0,0,0.6)`
+                              : `0 8px 24px ${color.glow}44`)
+                          : isHovered
+                            ? (isDark
+                                ? `0 0 24px ${color.glow}30, 0 6px 16px rgba(0,0,0,0.5), inset 0 0 30px ${color.glow}08`
+                                : `0 4px 16px ${color.glow}, 0 1px 4px rgba(0,0,0,0.08)`)
+                            : (isDark
+                                ? '0 2px 8px rgba(0,0,0,0.35)'
+                                : '0 1px 4px rgba(0,0,0,0.06)'),
+                        transform: isDragging
+                          ? 'rotate(3deg) scale(1.03)'
+                          : isHovered
+                            ? 'translateY(-2px) scale(1.01)'
+                            : 'none',
+                        transition: 'all 0.2s ease',
+                        opacity: draggedCard && draggedCard !== p.id ? 0.4 : 1
                       }}
-                      onClick={() => navigate(`/kanban/${p.id}/seguimiento`)}
                     >
                       <div style={{
                         fontWeight: '600',
                         marginBottom: '0.4rem',
                         color: color.cardText,
                         fontSize: '0.9rem',
-                        textShadow: isHovered && isDark ? `0 0 8px ${color.glow}33` : 'none'
+                        textShadow: isHovered && isDark ? `0 0 8px ${color.glow}33` : 'none',
+                        userSelect: 'none'
                       }}>{p.company_name}</div>
-                      <div style={{ fontSize: '0.8rem', lineHeight: '1.5' }}>
+                      <div style={{ fontSize: '0.8rem', lineHeight: '1.5', userSelect: 'none' }}>
                         <div style={{ color: color.cardSub }}>{p.contact_person}</div>
                         <div style={{
                           marginTop: '0.3rem',
