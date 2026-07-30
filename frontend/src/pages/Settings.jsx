@@ -37,7 +37,7 @@ const TABS = [
   { key: 'departments', label: 'Departamentos' },
   { key: 'employees', label: 'Empleados' },
   { key: 'docTypes', label: 'Tipos de Documento' },
-  { key: 'sponsorStatuses', label: 'Estatus de Patrocinio' },
+  { key: 'sponsorStatuses', label: 'Kanban' },
   { key: 'packages', label: 'Paquetes' },
   { key: 'checklist', label: 'Checklist' },
   { key: 'profiles', label: 'Perfiles' },
@@ -90,7 +90,7 @@ export default function Settings() {
   // Sponsor Statuses state
   const [sponsorStatuses, setSponsorStatuses] = useState([]);
   const [showSponsorStatusModal, setShowSponsorStatusModal] = useState(false);
-  const [sponsorStatusForm, setSponsorStatusForm] = useState({ name: '', sort_order: '', profile_ids: [] });
+  const [sponsorStatusForm, setSponsorStatusForm] = useState({ name: '', sort_order: '', color: '', profile_ids: [] });
 
   // Profiles state
   const [profiles, setProfiles] = useState([]);
@@ -540,14 +540,19 @@ export default function Settings() {
         <div className="card">
           <div className="docs-header">
             <h2>Estatus de Patrocinio</h2>
-            <button className="btn" onClick={() => { setSponsorStatusForm({ name: '', sort_order: '', profile_ids: [] }); setEditingId(null); setShowSponsorStatusModal(true); }}>+ Nuevo</button>
+            <button className="btn" onClick={() => { setSponsorStatusForm({ name: '', sort_order: '', color: '', profile_ids: [] }); setEditingId(null); setShowSponsorStatusModal(true); }}>+ Nuevo</button>
           </div>
           <table>
-            <thead><tr><th>Nombre</th><th>Orden</th><th>Perfiles</th><th>Acciones</th></tr></thead>
+            <thead><tr><th>Nombre</th><th>Color</th><th>Orden</th><th>Perfiles</th><th>Acciones</th></tr></thead>
             <tbody>
               {sponsorStatuses.map(s => (
                 <tr key={s.id}>
                   <td>{s.name}</td>
+                  <td>
+                    {s.color ? (
+                      <span style={{ display: 'inline-block', width: '24px', height: '24px', borderRadius: '6px', background: s.color, border: '1px solid var(--border)', verticalAlign: 'middle' }} title={s.color} />
+                    ) : '—'}
+                  </td>
                   <td>{s.sort_order}</td>
                   <td>
                     <div style={{ display: 'flex', flexWrap: 'wrap', gap: '.3rem' }}>
@@ -563,12 +568,12 @@ export default function Settings() {
                     </div>
                   </td>
                   <td>
-                    <button className="btn small" onClick={() => { setSponsorStatusForm({ name: s.name, sort_order: s.sort_order || '', profile_ids: s.profile_ids || [] }); setEditingId(s.id); setShowSponsorStatusModal(true); }}>Editar</button>
+                    <button className="btn small" onClick={() => { setSponsorStatusForm({ name: s.name, sort_order: s.sort_order || '', color: s.color || '', profile_ids: s.profile_ids || [] }); setEditingId(s.id); setShowSponsorStatusModal(true); }}>Editar</button>
                     <button className="btn small danger" style={{ marginLeft: '.5rem' }} onClick={async () => { if (confirm('¿Eliminar este estatus?')) { await api.delete(`/sponsor-statuses/${s.id}`); loadSponsorStatuses(); } }}>Eliminar</button>
                   </td>
                 </tr>
               ))}
-              {sponsorStatuses.length === 0 && <tr><td colSpan="4" className="empty-state">Sin estatus configurados</td></tr>}
+              {sponsorStatuses.length === 0 && <tr><td colSpan="5" className="empty-state">Sin estatus configurados</td></tr>}
             </tbody>
           </table>
         </div>
@@ -828,6 +833,11 @@ export default function Settings() {
             <div className="form-grid">
               <input className="full-width" placeholder="Nombre del estatus" value={sponsorStatusForm.name} onChange={e => setSponsorStatusForm({ ...sponsorStatusForm, name: e.target.value })} required />
               <input className="full-width" placeholder="Orden (para mostrar en el tablero)" type="number" value={sponsorStatusForm.sort_order} onChange={e => setSponsorStatusForm({ ...sponsorStatusForm, sort_order: e.target.value })} />
+              <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem', gridColumn: '1 / -1' }}>
+                <label style={{ fontWeight: 600, fontSize: '.85rem', whiteSpace: 'nowrap' }}>Color</label>
+                <input type="color" value={sponsorStatusForm.color || '#00b4d6'} onChange={e => setSponsorStatusForm({ ...sponsorStatusForm, color: e.target.value })} style={{ width: '44px', height: '44px', padding: '2px', borderRadius: '8px', cursor: 'pointer', border: '1px solid var(--border)' }} />
+                <input className="full-width" placeholder="#hex o nombre de color" value={sponsorStatusForm.color} onChange={e => setSponsorStatusForm({ ...sponsorStatusForm, color: e.target.value })} style={{ fontFamily: 'monospace', fontSize: '.82rem' }} />
+              </div>
             </div>
 
             <div style={{ marginTop: '1rem' }}>
@@ -873,7 +883,7 @@ export default function Settings() {
               try {
                 if (editingId) { await api.put(`/sponsor-statuses/${editingId}`, sponsorStatusForm); }
                 else { await api.post('/sponsor-statuses', sponsorStatusForm); }
-                setShowSponsorStatusModal(false); setSponsorStatusForm({ name: '', sort_order: '', profile_ids: [] }); setEditingId(null); loadSponsorStatuses();
+                setShowSponsorStatusModal(false); setSponsorStatusForm({ name: '', sort_order: '', color: '', profile_ids: [] }); setEditingId(null); loadSponsorStatuses();
               } catch (e) { setError(e.response?.data?.error || 'Error'); }
             }}>{editingId ? 'Actualizar' : 'Crear'}</button>
           </div>

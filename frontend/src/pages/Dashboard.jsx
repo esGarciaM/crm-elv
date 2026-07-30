@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import api from '../api';
 
 function fmt(n) {
@@ -68,6 +69,57 @@ export default function Dashboard() {
           <span><span className="dot pagado"></span> Pagado {fmt(stats.totalPagado)}</span>
           <span><span className="dot pendiente"></span> Pendiente {fmt(stats.totalPendiente)}</span>
           <span><span className="dot abonado"></span> Abonado {fmt(stats.totalAbonado)}</span>
+        </div>
+      </div>
+
+      {/* ── Patrocinios por Grupo y Status ── */}
+      <h2 className="section-title">Patrocinios por Grupo y Status</h2>
+      <div style={{ display: 'flex', gap: '1rem' }}>
+        <div className="card" style={{ flex: 1, padding: '1rem', minWidth: 0 }}>
+          <h3 style={{ margin: '0 0 0.5rem', textAlign: 'center', fontSize: '0.95rem' }}>Por Grupo</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={stats.byGrupo}
+                dataKey="count"
+                nameKey="grupo"
+                cx="50%"
+                cy="50%"
+                outerRadius={100}
+                innerRadius={50}
+                label={({ grupo, count }) => `${grupo} (${count})`}
+              >
+                {stats.byGrupo.map((entry, idx) => (
+                  <Cell key={idx} fill={['#00b4d8', '#a832d6', '#10b981', '#f59e0b', '#ef4444'][idx % 5]} />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="card" style={{ flex: 1, padding: '1rem', minWidth: 0 }}>
+          <h3 style={{ margin: '0 0 0.5rem', textAlign: 'center', fontSize: '0.95rem' }}>Por Status</h3>
+          <ResponsiveContainer width="100%" height={300}>
+            <PieChart>
+              <Pie
+                data={stats.bySponsorStatus}
+                dataKey="count"
+                nameKey="status_name"
+                cx="50%"
+                cy="50%"
+                outerRadius={100}
+                innerRadius={50}
+                label={({ status_name, count }) => `${status_name} (${count})`}
+              >
+                {stats.bySponsorStatus.map((entry, idx) => (
+                  <Cell key={idx} fill={['#00b4d8', '#a832d6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'][idx % 7]} />
+                ))}
+              </Pie>
+              <Tooltip />
+              <Legend />
+            </PieChart>
+          </ResponsiveContainer>
         </div>
       </div>
 

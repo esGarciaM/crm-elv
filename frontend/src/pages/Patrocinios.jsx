@@ -65,7 +65,8 @@ export default function Patrocinios() {
     company_name: '', contact_person: '', phone: '', sponsorship_type: '', package: '',
     visit_status: '', payment_status: '', student_obtained: '', student_contacted: '',
     in_kind_detail: '', payment_detail: '', social_media_fulfilled: '', tickets_delivered: '',
-    logo_requested: '', notes: '', monetary_amount: '', in_kind_amount: ''
+    logo_requested: '', notes: '', monetary_amount: '', in_kind_amount: '',
+    alumno_encargado: '', grupo: ''
   });
   const [packages, setPackages] = useState([]);
   const [sponsorStatuses, setSponsorStatuses] = useState([]);
@@ -156,7 +157,8 @@ export default function Patrocinios() {
       company_name: '', contact_person: '', phone: '', sponsorship_type: '', package: '',
       visit_status: '', payment_status: '', student_obtained: '', student_contacted: '',
       in_kind_detail: '', payment_detail: '', social_media_fulfilled: '', tickets_delivered: '',
-      logo_requested: '', notes: '', monetary_amount: '', in_kind_amount: ''
+      logo_requested: '', notes: '', monetary_amount: '', in_kind_amount: '',
+      alumno_encargado: '', grupo: ''
     });
     setError('');
     setShowCreateModal(true);
@@ -182,7 +184,9 @@ export default function Patrocinios() {
       notes: p.notes || '',
       sponsor_status_id: p.sponsor_status_id || '',
       monetary_amount: p.monetary_amount || '',
-      in_kind_amount: p.in_kind_amount || ''
+      in_kind_amount: p.in_kind_amount || '',
+      alumno_encargado: p.alumno_encargado || '',
+      grupo: p.grupo || ''
     });
     setError('');
     setShowCreateModal(true);
@@ -277,7 +281,23 @@ export default function Patrocinios() {
                     <td>{p.package || '—'}</td>
                     <td style={{ color: p.monetary_amount > 0 ? 'var(--success)' : 'var(--text-muted)', fontWeight: p.monetary_amount > 0 ? 600 : 400 }}>{p.monetary_amount > 0 ? `$${Number(p.monetary_amount).toLocaleString('es-MX', { minimumFractionDigits: 2 })}` : '—'}</td>
                     <td style={{ color: p.in_kind_amount > 0 ? 'var(--warning)' : 'var(--text-muted)', fontWeight: p.in_kind_amount > 0 ? 600 : 400 }}>{p.in_kind_amount > 0 ? `$${Number(p.in_kind_amount).toLocaleString('es-MX', { minimumFractionDigits: 2 })}` : '—'}</td>
-                    <td><span className="status-badge info">{p.sponsor_status_name || 'Sin estatus'}</span></td>
+                    <td>
+                      {p.sponsor_status_color ? (
+                        <span style={{
+                          color: p.sponsor_status_color,
+                          border: `1px solid ${p.sponsor_status_color}`,
+                          background: `${p.sponsor_status_color}33`,
+                          padding: '3px 10px',
+                          borderRadius: '20px',
+                          fontSize: '0.78rem',
+                          fontWeight: 600,
+                          display: 'inline-block',
+                          whiteSpace: 'nowrap'
+                        }}>{p.sponsor_status_name || 'Sin estatus'}</span>
+                      ) : (
+                        <span className="status-badge info">{p.sponsor_status_name || 'Sin estatus'}</span>
+                      )}
+                    </td>
                     <td><span className="status-badge">{p.sponsorship_type || '—'}</span></td>
                     <td><span className={`status-badge ${p.payment_status === 'Pagado' ? 'success' : p.payment_status === 'Cancelado' ? 'danger' : ''}`}>{p.payment_status || 'Pendiente'}</span></td>
                     <td>
@@ -587,6 +607,22 @@ export default function Patrocinios() {
                   <option value="Pendiente">Pendiente</option>
                   <option value="Abonado">Abonado</option>
                   <option value="Cancelado">Cancelado</option>
+                </select>
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>Alumno Encargado</label>
+                <input placeholder="Nombre del alumno encargado" value={formData.alumno_encargado} onChange={e => setFormData({ ...formData, alumno_encargado: e.target.value })} />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500' }}>Grupo</label>
+                <select value={formData.grupo} onChange={e => setFormData({ ...formData, grupo: e.target.value })}>
+                  <option value="">— Seleccionar —</option>
+                  <option value="A">A</option>
+                  <option value="B">B</option>
+                  <option value="C">C</option>
+                  <option value="D">D</option>
                 </select>
               </div>
               

@@ -192,6 +192,8 @@ addColumn('patrocinios', 'updated_by', 'INTEGER REFERENCES users(id)');
 addColumn('patrocinios', 'sponsor_status_id', 'INTEGER REFERENCES sponsor_statuses(id) ON DELETE SET NULL');
 addColumn('patrocinios', 'monetary_amount', 'REAL');
 addColumn('patrocinios', 'in_kind_amount', 'REAL');
+addColumn('patrocinios', 'alumno_encargado', 'TEXT');
+addColumn('patrocinios', 'grupo', 'TEXT');
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS patrocinio_documents (

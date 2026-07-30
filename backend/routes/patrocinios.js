@@ -91,6 +91,7 @@ router.get('/', authMiddleware, (req, res) => {
       creator.name AS created_by_name,
       editor.name AS updated_by_name,
       ss.name AS sponsor_status_name,
+      ss.color AS sponsor_status_color,
       COALESCE(
         CASE WHEN p.monetary_amount IS NOT NULL AND p.monetary_amount != 0 THEN p.monetary_amount END,
         CASE WHEN pk.type != 'especie' AND p.package NOT LIKE '% E %' THEN pk.amount END
@@ -257,7 +258,8 @@ router.post('/', authMiddleware, (req, res) => {
     company_name, contact_person, phone, sponsorship_type, package: pkg,
     visit_status, payment_status, student_obtained, student_contacted,
     in_kind_detail, payment_detail, social_media_fulfilled, tickets_delivered,
-    logo_requested, notes, monetary_amount, in_kind_amount
+    logo_requested, notes, monetary_amount, in_kind_amount,
+    alumno_encargado, grupo
   } = req.body;
 
   let finalMonetary = monetary_amount !== undefined && monetary_amount !== '' ? monetary_amount : null;
@@ -277,14 +279,16 @@ router.post('/', authMiddleware, (req, res) => {
     INSERT INTO patrocinios (company_name, contact_person, phone, sponsorship_type, package,
       visit_status, payment_status, student_obtained, student_contacted,
       in_kind_detail, payment_detail, social_media_fulfilled, tickets_delivered,
-      logo_requested, notes, created_by, monetary_amount, in_kind_amount)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+      logo_requested, notes, created_by, monetary_amount, in_kind_amount,
+      alumno_encargado, grupo)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     company_name || null, contact_person || null, phone || null, sponsorship_type || null, pkg || null,
     visit_status || null, payment_status || null, student_obtained || null, student_contacted || null,
     in_kind_detail || null, payment_detail || null, social_media_fulfilled || null, tickets_delivered || null,
     logo_requested || null, notes || null, req.user.id,
-    finalMonetary, finalInKind
+    finalMonetary, finalInKind,
+    alumno_encargado || null, grupo || null
   );
 
   res.status(201).json({ id: result.lastInsertRowid });
@@ -302,7 +306,8 @@ router.put('/:id', authMiddleware, (req, res) => {
     'company_name', 'contact_person', 'phone', 'sponsorship_type', 'package',
     'visit_status', 'payment_status', 'student_obtained', 'student_contacted',
     'in_kind_detail', 'payment_detail', 'social_media_fulfilled', 'tickets_delivered',
-    'logo_requested', 'notes', 'sponsor_status_id', 'monetary_amount', 'in_kind_amount'
+    'logo_requested', 'notes', 'sponsor_status_id', 'monetary_amount', 'in_kind_amount',
+    'alumno_encargado', 'grupo'
   ];
 
   const updates = [];

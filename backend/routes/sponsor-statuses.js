@@ -17,6 +17,7 @@ router.get('/', authMiddleware, (req, res) => {
     id: s.id,
     name: s.name,
     sort_order: s.sort_order,
+    color: s.color || null,
     created_at: s.created_at,
     updated_at: s.updated_at,
     profile_ids: s.profile_ids_str ? s.profile_ids_str.split(',').map(Number) : []
@@ -26,11 +27,11 @@ router.get('/', authMiddleware, (req, res) => {
 });
 
 router.post('/', authMiddleware, adminOnly, (req, res) => {
-  const { name, sort_order, profile_ids } = req.body;
+  const { name, sort_order, color, profile_ids } = req.body;
   if (!name) return res.status(400).json({ error: 'Nombre requerido' });
 
   const insertStatus = db.transaction(() => {
-    const result = db.prepare('INSERT INTO sponsor_statuses (name, sort_order) VALUES (?, ?)').run(name, sort_order || 0);
+    const result = db.prepare('INSERT INTO sponsor_statuses (name, sort_order, color) VALUES (?, ?, ?)').run(name, sort_order || 0, color || null);
     const statusId = result.lastInsertRowid;
 
     if (Array.isArray(profile_ids) && profile_ids.length > 0) {
@@ -55,11 +56,11 @@ router.post('/', authMiddleware, adminOnly, (req, res) => {
 });
 
 router.put('/:id', authMiddleware, adminOnly, (req, res) => {
-  const { name, sort_order, profile_ids } = req.body;
+  const { name, sort_order, color, profile_ids } = req.body;
 
   const updateStatus = db.transaction(() => {
-    db.prepare('UPDATE sponsor_statuses SET name = COALESCE(?, name), sort_order = COALESCE(?, sort_order), updated_at = datetime(\'now\',\'localtime\') WHERE id = ?')
-      .run(name, sort_order, req.params.id);
+    db.prepare('UPDATE sponsor_statuses SET name = COALESCE(?, name), sort_order = COALESCE(?, sort_order), color = COALESCE(?, color), updated_at = datetime(\'now\',\'localtime\') WHERE id = ?')
+      .run(name, sort_order, color || null, req.params.id);
 
     if (Array.isArray(profile_ids)) {
       db.prepare('DELETE FROM profile_sponsor_statuses WHERE sponsor_status_id = ?').run(req.params.id);

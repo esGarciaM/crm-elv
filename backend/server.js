@@ -142,6 +142,19 @@ app.get('/api/stats', (req, res) => {
 
   // ── Patrocinios Stats ──
   const totalPatrocinios = db.prepare('SELECT COUNT(*) as count FROM patrocinios').get().count;
+  const byGrupo = db.prepare(`
+    SELECT COALESCE(NULLIF(grupo, ''), 'Sin grupo') as grupo, COUNT(*) as count
+    FROM patrocinios
+    GROUP BY CASE WHEN grupo IS NULL OR grupo = '' THEN 'Sin grupo' ELSE grupo END
+    ORDER BY grupo
+  `).all();
+  const bySponsorStatus = db.prepare(`
+    SELECT COALESCE(ss.name, 'Sin estatus') as status_name, COUNT(*) as count
+    FROM patrocinios p
+    LEFT JOIN sponsor_statuses ss ON ss.id = p.sponsor_status_id
+    GROUP BY COALESCE(ss.name, 'Sin estatus')
+    ORDER BY ss.sort_order
+  `).all();
   const patrociniosPkg = db.prepare(`
     SELECT p.payment_status, p.sponsorship_type, COALESCE(pk.amount, 0) as pkg_amount
     FROM patrocinios p
@@ -183,6 +196,8 @@ app.get('/api/stats', (req, res) => {
     patrociniosPendiente,
     patrociniosAbonado,
     patrociniosInKind,
+    byGrupo,
+    bySponsorStatus,
     // Tasks
     tasksTotal,
     tasksPending,
