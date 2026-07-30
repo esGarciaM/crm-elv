@@ -2,6 +2,26 @@ import { Router } from 'express';
 import db from '../database.js';
 import { authMiddleware } from '../middleware/auth.js';
 import sanitizeHtml from 'sanitize-html';
+import multer from 'multer';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
+import fs from 'fs';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const WATERMARK_DIR = join(__dirname, '..', 'uploads', 'watermarks');
+if (!fs.existsSync(WATERMARK_DIR)) fs.mkdirSync(WATERMARK_DIR, { recursive: true });
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => cb(null, WATERMARK_DIR),
+  filename: (req, file, cb) => {
+    const ext = file.originalname.split('.').pop();
+    cb(null, `${req.params.id}_${Date.now()}.${ext}`);
+  }
+});
+
+const upload = multer({ storage, limits: { fileSize: 5 * 1024 * 1024 } });
 
 const router = Router();
 
@@ -28,7 +48,7 @@ function sanitizeTemplate(body) {
       'h4': ['style'], 'h5': ['style'], 'h6': ['style'],
       'strong': ['style'], 'em': ['style'], 'u': ['style'],
       'ul': ['style'], 'ol': ['style'], 'li': ['style'],
-      'blockquote': ['style'], 'pre': ['style'], 'code': ['style']
+      'blockquote': ['style'], 'pre': ['code']
     },
     allowedStyles: {
       '*': {
@@ -66,7 +86,7 @@ router.post('/', authMiddleware, (req, res) => {
   const clean = sanitizeTemplate(template_body);
   try {
     const result = db.prepare('INSERT INTO document_types (name, is_client, template_body) VALUES (?, ?, ?)').run(name, is_client ? 1 : 0, clean);
-    res.status(201).json({ id: result.lastInsertRowid, name, is_client: is_client ? 1 : 0, template_body: clean });
+    res.status(201).json({ id: result.lastInsertRowid, name, is_client: is_client ? 1 : 0, template_body: clean, watermark_url: null });
   } catch (e) {
     if (e.message.includes('UNIQUE')) return res.status(409).json({ error: 'El tipo de documento ya existe' });
     throw e;
@@ -89,9 +109,44 @@ router.put('/:id', authMiddleware, (req, res) => {
 });
 
 router.delete('/:id', authMiddleware, (req, res) => {
+  const doc = db.prepare('SELECT id, watermark_url FROM document_types WHERE id = ?').get(req.params.id);
+  if (!doc) return res.status(404).json({ error: 'Tipo de documento no encontrado' });
+
+  if (doc.watermark_url) {
+    const filePath = join(__dirname, '..', doc.watermark_url);
+    if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+  }
+
   const result = db.prepare('DELETE FROM document_types WHERE id = ?').run(req.params.id);
   if (result.changes === 0) return res.status(404).json({ error: 'Tipo de documento no encontrado' });
   res.json({ message: 'Tipo de documento eliminado' });
+});
+
+router.put('/:id/watermark', authMiddleware, upload.single('watermark'), (req, res) => {
+  const doc = db.prepare('SELECT id, watermark_url FROM document_types WHERE id = ?').get(req.params.id);
+  if (!doc) return res.status(404).json({ error: 'Tipo de documento no encontrado' });
+  if (!req.file) return res.status(400).json({ error: 'Archivo de imagen requerido' });
+
+  if (doc.watermark_url) {
+    const oldPath = join(__dirname, '..', doc.watermark_url);
+    if (fs.existsSync(oldPath)) fs.unlinkSync(oldPath);
+  }
+
+  const watermark_url = `/uploads/watermarks/${req.file.filename}`;
+  db.prepare('UPDATE document_types SET watermark_url = ? WHERE id = ?').run(watermark_url, req.params.id);
+  res.json({ watermark_url });
+});
+
+router.delete('/:id/watermark', authMiddleware, (req, res) => {
+  const doc = db.prepare('SELECT id, watermark_url FROM document_types WHERE id = ?').get(req.params.id);
+  if (!doc) return res.status(404).json({ error: 'Tipo de documento no encontrado' });
+  if (!doc.watermark_url) return res.status(400).json({ error: 'No hay marca de agua' });
+
+  const filePath = join(__dirname, '..', doc.watermark_url);
+  if (fs.existsSync(filePath)) fs.unlinkSync(filePath);
+
+  db.prepare('UPDATE document_types SET watermark_url = NULL WHERE id = ?').run(req.params.id);
+  res.json({ message: 'Marca de agua eliminada' });
 });
 
 export default router;

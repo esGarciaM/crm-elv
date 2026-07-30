@@ -43,9 +43,10 @@ router.get('/patrocinios/:id/seguimiento', authMiddleware, (req, res) => {
     packageInfo = db.prepare('SELECT * FROM packages WHERE name = ?').get(patrocinio.package);
     if (packageInfo) {
       items = db.prepare(`
-        SELECT pci.*, pc.completed, pc.completed_at
+        SELECT pci.*, d.name AS department_name, pc.completed, pc.completed_at
         FROM package_checklist_items pci
         JOIN package_checklist pc2 ON pc2.item_id = pci.id
+        LEFT JOIN departments d ON d.id = pci.department_id
         LEFT JOIN patrocinio_checklist pc ON pc.item_id = pci.id AND pc.patrocinio_id = ?
         WHERE pc2.package_id = ?
         ORDER BY pci.sort_order
@@ -79,7 +80,14 @@ router.get('/patrocinios/:id/seguimiento', authMiddleware, (req, res) => {
         ORDER BY c.created_at DESC
       `).all(id);
 
-  res.json({ patrocinio, package: packageInfo, items, completedItemIds, comments });
+  res.json({
+    patrocinio,
+    package: packageInfo,
+    items,
+    completedItemIds,
+    comments,
+    user_department_id: req.user.department_id || null
+  });
 });
 
 // ──────────────────────────────────────────────────

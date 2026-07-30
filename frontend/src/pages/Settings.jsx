@@ -29,7 +29,7 @@ const QUILL_FORMATS = [
   'bold', 'italic', 'underline', 'strike',
   'color', 'background', 'align',
   'blockquote', 'code-block',
-  'list', 'bullet', 'indent',
+  'list', 'indent',
   'link', 'image'
 ];
 
@@ -64,6 +64,8 @@ export default function Settings() {
   const [deptForm, setDeptForm] = useState({ name: '', description: '' });
   const [empForm, setEmpForm] = useState({ first_name: '', last_name: '', email: '', phone: '', department_id: '' });
   const [docTypeForm, setDocTypeForm] = useState({ name: '', is_client: false, template_body: '' });
+  const [watermarkFile, setWatermarkFile] = useState(null);
+  const [watermarkPreview, setWatermarkPreview] = useState(null);
   const [pkgForm, setPkgForm] = useState({ name: '', amount: '', type: '', sort_order: '' });
   const [editingId, setEditingId] = useState(null);
   const [error, setError] = useState('');
@@ -83,12 +85,12 @@ export default function Settings() {
   // Checklist Catalog state (CRUD for the items themselves)
   const [clCatalog, setClCatalog] = useState([]);
   const [showClModal, setShowClModal] = useState(false);
-  const [clForm, setClForm] = useState({ key: '', label: '', sort_order: '' });
+  const [clForm, setClForm] = useState({ key: '', label: '', sort_order: '', department_id: '', visible_to_client: true });
 
   // Sponsor Statuses state
   const [sponsorStatuses, setSponsorStatuses] = useState([]);
   const [showSponsorStatusModal, setShowSponsorStatusModal] = useState(false);
-  const [sponsorStatusForm, setSponsorStatusForm] = useState({ name: '', sort_order: '' });
+  const [sponsorStatusForm, setSponsorStatusForm] = useState({ name: '', sort_order: '', profile_ids: [] });
 
   // Profiles state
   const [profiles, setProfiles] = useState([]);
@@ -248,14 +250,14 @@ export default function Settings() {
 
   // ── Checklist Catalog CRUD ──
   const openClNew = () => {
-    setClForm({ key: '', label: '', sort_order: '' });
+    setClForm({ key: '', label: '', sort_order: '', department_id: '', visible_to_client: true });
     setEditingId(null);
     setError('');
     setShowClModal(true);
   };
 
   const editCl = (item) => {
-    setClForm({ key: item.key, label: item.label, sort_order: item.sort_order ?? '' });
+    setClForm({ key: item.key, label: item.label, sort_order: item.sort_order ?? '', department_id: item.department_id ?? '', visible_to_client: !!item.visible_to_client });
     setEditingId(item.id);
     setError('');
     setShowClModal(true);
@@ -275,7 +277,7 @@ export default function Settings() {
       }
       setShowClModal(false);
       setEditingId(null);
-      setClForm({ key: '', label: '', sort_order: '' });
+      setClForm({ key: '', label: '', sort_order: '', department_id: '', visible_to_client: true });
       loadClCatalog();
     } catch (e) {
       setError(e.response?.data?.error || 'Error al guardar elemento');
@@ -513,12 +515,14 @@ export default function Settings() {
           </div>
           {error && <div className="error-msg" style={{ marginBottom: '.75rem' }}>{error}</div>}
           <table>
-            <thead><tr><th>Clave (key)</th><th>Etiqueta (label)</th><th>Orden</th><th>Acciones</th></tr></thead>
+            <thead><tr><th>Clave (key)</th><th>Etiqueta (label)</th><th>Departamento</th><th>Cliente</th><th>Orden</th><th>Acciones</th></tr></thead>
             <tbody>
               {clCatalog.map(item => (
                 <tr key={item.id}>
                   <td><code>{item.key}</code></td>
                   <td>{item.label}</td>
+                  <td>{item.department_name || '—'}</td>
+                  <td>{item.visible_to_client ? 'Sí' : '—'}</td>
                   <td>{item.sort_order}</td>
                   <td>
                     <button className="btn small" onClick={() => editCl(item)}>Editar</button>
@@ -526,7 +530,7 @@ export default function Settings() {
                   </td>
                 </tr>
               ))}
-              {clCatalog.length === 0 && <tr><td colSpan="4" className="empty-state">Sin elementos de checklist</td></tr>}
+              {clCatalog.length === 0 && <tr><td colSpan="6" className="empty-state">Sin elementos de checklist</td></tr>}
             </tbody>
           </table>
         </div>
@@ -536,22 +540,35 @@ export default function Settings() {
         <div className="card">
           <div className="docs-header">
             <h2>Estatus de Patrocinio</h2>
-            <button className="btn" onClick={() => { setSponsorStatusForm({ name: '', sort_order: '' }); setEditingId(null); setShowSponsorStatusModal(true); }}>+ Nuevo</button>
+            <button className="btn" onClick={() => { setSponsorStatusForm({ name: '', sort_order: '', profile_ids: [] }); setEditingId(null); setShowSponsorStatusModal(true); }}>+ Nuevo</button>
           </div>
           <table>
-            <thead><tr><th>Nombre</th><th>Orden</th><th>Acciones</th></tr></thead>
+            <thead><tr><th>Nombre</th><th>Orden</th><th>Perfiles</th><th>Acciones</th></tr></thead>
             <tbody>
               {sponsorStatuses.map(s => (
                 <tr key={s.id}>
                   <td>{s.name}</td>
                   <td>{s.sort_order}</td>
                   <td>
-                    <button className="btn small" onClick={() => { setSponsorStatusForm({ name: s.name, sort_order: s.sort_order || '' }); setEditingId(s.id); setShowSponsorStatusModal(true); }}>Editar</button>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '.3rem' }}>
+                      {(s.profile_ids || []).map(pid => {
+                        const p = profiles.find(pr => pr.id === pid);
+                        return p ? (
+                          <span key={pid} className="status-badge info" style={{ fontSize: '.72rem', cursor: 'default' }}>
+                            {p.name}
+                          </span>
+                        ) : null;
+                      })}
+                      {(!s.profile_ids || s.profile_ids.length === 0) && <span style={{ color: 'var(--text-muted)', fontSize: '.8rem' }}>Todos los perfiles</span>}
+                    </div>
+                  </td>
+                  <td>
+                    <button className="btn small" onClick={() => { setSponsorStatusForm({ name: s.name, sort_order: s.sort_order || '', profile_ids: s.profile_ids || [] }); setEditingId(s.id); setShowSponsorStatusModal(true); }}>Editar</button>
                     <button className="btn small danger" style={{ marginLeft: '.5rem' }} onClick={async () => { if (confirm('¿Eliminar este estatus?')) { await api.delete(`/sponsor-statuses/${s.id}`); loadSponsorStatuses(); } }}>Eliminar</button>
                   </td>
                 </tr>
               ))}
-              {sponsorStatuses.length === 0 && <tr><td colSpan="3" className="empty-state">Sin estatus configurados</td></tr>}
+              {sponsorStatuses.length === 0 && <tr><td colSpan="4" className="empty-state">Sin estatus configurados</td></tr>}
             </tbody>
           </table>
         </div>
@@ -782,13 +799,21 @@ export default function Settings() {
 
       {showClModal && (
         <div className="modal-overlay" onClick={() => setShowClModal(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
             <h2>{editingId ? 'Editar' : 'Nuevo'} Elemento del Checklist</h2>
             {error && <div className="error-msg">{error}</div>}
             <div className="form-grid">
               <input className="full-width" placeholder="Clave (key)" value={clForm.key} onChange={e => setClForm({ ...clForm, key: e.target.value })} required />
               <input className="full-width" placeholder="Etiqueta (label)" value={clForm.label} onChange={e => setClForm({ ...clForm, label: e.target.value })} required />
               <input className="full-width" placeholder="Orden" type="number" value={clForm.sort_order} onChange={e => setClForm({ ...clForm, sort_order: e.target.value })} />
+              <select className="full-width" value={clForm.department_id} onChange={e => setClForm({ ...clForm, department_id: e.target.value })}>
+                <option value="">— Departamento visible —</option>
+                {departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}
+              </select>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '.5rem', cursor: 'pointer', marginTop: '.25rem' }}>
+                <input type="checkbox" checked={clForm.visible_to_client} onChange={e => setClForm({ ...clForm, visible_to_client: e.target.checked })} />
+                Visible para el cliente
+              </label>
             </div>
             <button className="btn primary" onClick={saveCl}>{editingId ? 'Actualizar' : 'Crear'}</button>
           </div>
@@ -797,20 +822,58 @@ export default function Settings() {
 
       {showSponsorStatusModal && (
         <div className="modal-overlay" onClick={() => setShowSponsorStatusModal(false)}>
-          <div className="modal" onClick={e => e.stopPropagation()}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '500px' }}>
             <h2>{editingId ? 'Editar' : 'Nuevo'} Estatus de Patrocinio</h2>
             {error && <div className="error-msg">{error}</div>}
             <div className="form-grid">
               <input className="full-width" placeholder="Nombre del estatus" value={sponsorStatusForm.name} onChange={e => setSponsorStatusForm({ ...sponsorStatusForm, name: e.target.value })} required />
               <input className="full-width" placeholder="Orden (para mostrar en el tablero)" type="number" value={sponsorStatusForm.sort_order} onChange={e => setSponsorStatusForm({ ...sponsorStatusForm, sort_order: e.target.value })} />
             </div>
-            <button className="btn primary" onClick={async () => {
+
+            <div style={{ marginTop: '1rem' }}>
+              <div style={{ fontWeight: 600, fontSize: '.85rem', marginBottom: '.5rem' }}>Perfiles con acceso</div>
+              <p style={{ color: 'var(--text-light)', fontSize: '.78rem', marginBottom: '.5rem' }}>
+                Solo estos perfiles podrán ver este estatus en el tablero Kanban. Si no seleccionas ninguno, todos los perfiles podrán verlo.
+              </p>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '.35rem' }}>
+                {profiles.map(p => {
+                  const active = sponsorStatusForm.profile_ids.includes(p.id);
+                  return (
+                    <label key={p.id} style={{
+                      display: 'flex', alignItems: 'center', gap: '.75rem',
+                      padding: '.5rem .75rem', borderRadius: 'var(--radius)',
+                      background: active ? 'var(--success-subtle)' : 'var(--bg-secondary)',
+                      border: `1px solid ${active ? 'var(--success)' : 'var(--border)'}`,
+                      cursor: 'pointer', transition: 'all .15s ease'
+                    }}>
+                      <input
+                        type="checkbox"
+                        checked={active}
+                        onChange={() => {
+                          const next = active
+                            ? sponsorStatusForm.profile_ids.filter(id => id !== p.id)
+                            : [...sponsorStatusForm.profile_ids, p.id];
+                          setSponsorStatusForm({ ...sponsorStatusForm, profile_ids: next });
+                        }}
+                        style={{ width: '18px', height: '18px', cursor: 'pointer' }}
+                      />
+                      <span style={{ fontWeight: active ? 600 : 400, fontSize: '.85rem' }}>
+                        {p.name}
+                      </span>
+                    </label>
+                  );
+                })}
+                {profiles.length === 0 && <span style={{ color: 'var(--text-muted)', fontSize: '.8rem' }}>No hay perfiles configurados. Crea un perfil primero.</span>}
+              </div>
+            </div>
+
+            <button className="btn primary" style={{ marginTop: '1.25rem' }} onClick={async () => {
               if (!sponsorStatusForm.name.trim()) return;
               setError('');
               try {
                 if (editingId) { await api.put(`/sponsor-statuses/${editingId}`, sponsorStatusForm); }
                 else { await api.post('/sponsor-statuses', sponsorStatusForm); }
-                setShowSponsorStatusModal(false); setSponsorStatusForm({ name: '', sort_order: '' }); setEditingId(null); loadSponsorStatuses();
+                setShowSponsorStatusModal(false); setSponsorStatusForm({ name: '', sort_order: '', profile_ids: [] }); setEditingId(null); loadSponsorStatuses();
               } catch (e) { setError(e.response?.data?.error || 'Error'); }
             }}>{editingId ? 'Actualizar' : 'Crear'}</button>
           </div>
@@ -835,7 +898,13 @@ export default function Settings() {
         <div className="card">
           <div className="docs-header">
             <h2>Tipos de Documento</h2>
-            <button className="btn" onClick={() => { setDocTypeForm({ name: '', is_client: false, template_body: '' }); setEditingId(null); setShowDocTypeModal(true); }}>+ Nuevo</button>
+            <button className="btn" onClick={() => {
+  setDocTypeForm({ name: '', is_client: false, template_body: '' });
+  setEditingId(null);
+  setWatermarkFile(null);
+  setWatermarkPreview(null);
+  setShowDocTypeModal(true);
+}}>+ Nuevo</button>
           </div>
           <table>
             <thead><tr><th>Nombre</th><th>Cliente</th><th>Acciones</th></tr></thead>
@@ -845,7 +914,13 @@ export default function Settings() {
                   <td>{d.name}</td>
                   <td>{d.is_client ? 'Sí' : '—'}</td>
                   <td>
-                    <button className="btn small" onClick={() => { setDocTypeForm({ name: d.name, is_client: !!d.is_client, template_body: d.template_body || '' }); setEditingId(d.id); setShowDocTypeModal(true); }}>Editar</button>
+                    <button className="btn small" onClick={() => {
+                      setDocTypeForm({ name: d.name, is_client: !!d.is_client, template_body: d.template_body || '' });
+                      setEditingId(d.id);
+                      setWatermarkFile(null);
+                      setWatermarkPreview(d.watermark_url || null);
+                      setShowDocTypeModal(true);
+                    }}>Editar</button>
                     <button className="btn small danger" style={{ marginLeft: '.5rem' }} onClick={async () => { if (confirm('¿Eliminar tipo de documento?')) { await api.delete(`/document-types/${d.id}`); loadDocTypes(); }}}>Eliminar</button>
                   </td>
                 </tr>
@@ -893,7 +968,7 @@ export default function Settings() {
                       { v: 'EstadoVisita', d: 'Visita' }, { v: 'EstadoPago', d: 'Pago' }, { v: 'Fecha', d: 'Fecha actual' },
                       { v: 'DetalleEspecie', d: 'Detalle especie' }, { v: 'DetallePago', d: 'Detalle pago' },
                       { v: 'RedesSociales', d: 'Redes' }, { v: 'Boletos', d: 'Boletos' }, { v: 'Logo', d: 'Logo' },
-                      { v: 'Notas', d: 'Notas' }
+                      { v: 'Folio', d: 'Folio' }, { v: 'Notas', d: 'Notas' }
                     ].map(({ v, d }) => (
                       <button key={v} type="button" onClick={() => {
                         navigator.clipboard.writeText(`{{${v}}}`);
@@ -903,6 +978,44 @@ export default function Settings() {
                     ))}
                   </div>
                 </div>
+
+                <div style={{ marginTop: '1rem', padding: '.65rem .85rem', background: 'var(--bg-secondary)', borderRadius: '6px', border: '1px solid var(--border)' }}>
+                  <div style={{ fontSize: '.75rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '.04em', marginBottom: '.4rem' }}>
+                    Marca de agua
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem', flexWrap: 'wrap' }}>
+                    {watermarkPreview && (
+                      <div style={{ position: 'relative', width: 80, height: 80, borderRadius: '6px', overflow: 'hidden', border: '1px solid var(--border)', flexShrink: 0 }}>
+                        <img src={watermarkPreview} alt="Marca de agua" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      </div>
+                    )}
+                    <label style={{ cursor: 'pointer', padding: '.35rem .65rem', borderRadius: '4px', border: '1px solid var(--border)', background: 'var(--card)', fontSize: '.8rem' }}>
+                      {watermarkPreview ? 'Cambiar imagen' : 'Subir imagen'}
+                      <input type="file" accept="image/png,image/jpeg,image/gif,image/webp" style={{ display: 'none' }} onChange={e => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          setWatermarkFile(file);
+                          setWatermarkPreview(URL.createObjectURL(file));
+                        }
+                      }} />
+                    </label>
+                    {watermarkPreview && (
+                      <button type="button" className="btn small danger" onClick={async () => {
+                        if (editingId) {
+                          try {
+                            await api.delete(`/document-types/${editingId}/watermark`);
+                            setWatermarkFile(null);
+                            setWatermarkPreview(null);
+                            loadDocTypes();
+                          } catch (e) { alert(e.response?.data?.error || 'Error'); }
+                        } else {
+                          setWatermarkFile(null);
+                          setWatermarkPreview(null);
+                        }
+                      }}>Eliminar</button>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -910,9 +1023,24 @@ export default function Settings() {
               if (!docTypeForm.name.trim()) return;
               setError('');
               try {
-                if (editingId) { await api.put(`/document-types/${editingId}`, docTypeForm); }
-                else { await api.post('/document-types', docTypeForm); }
-                setShowDocTypeModal(false); setDocTypeForm({ name: '', is_client: false, template_body: '' }); setEditingId(null); loadDocTypes();
+                let docId = editingId;
+                if (editingId) {
+                  await api.put(`/document-types/${editingId}`, docTypeForm);
+                } else {
+                  const res = await api.post('/document-types', docTypeForm);
+                  docId = res.data.id;
+                }
+                if (watermarkFile) {
+                  const fd = new FormData();
+                  fd.append('watermark', watermarkFile);
+                  await api.put(`/document-types/${docId}/watermark`, fd, { headers: { 'Content-Type': 'multipart/form-data' } });
+                }
+                setShowDocTypeModal(false);
+                setDocTypeForm({ name: '', is_client: false, template_body: '' });
+                setWatermarkFile(null);
+                setWatermarkPreview(null);
+                setEditingId(null);
+                loadDocTypes();
               } catch (e) { setError(e.response?.data?.error || 'Error'); }
             }}>{editingId ? 'Actualizar' : 'Crear'}</button>
           </div>

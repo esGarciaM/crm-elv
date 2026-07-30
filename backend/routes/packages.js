@@ -78,22 +78,29 @@ router.delete('/:id', authMiddleware, adminOnly, (req, res) => {
 
 // GET /api/packages/checklist-items — all possible checklist items
 router.get('/checklist-items', authMiddleware, (req, res) => {
-  const items = db.prepare('SELECT * FROM package_checklist_items ORDER BY sort_order').all();
+  const items = db.prepare(`
+    SELECT pci.*, d.name AS department_name
+    FROM package_checklist_items pci
+    LEFT JOIN departments d ON d.id = pci.department_id
+    ORDER BY pci.sort_order
+  `).all();
   res.json(items);
 });
 
 // POST /api/packages/checklist-items — create new item (admin only)
 router.post('/checklist-items', authMiddleware, adminOnly, (req, res) => {
-  const { key, label, sort_order } = req.body;
+  const { key, label, sort_order, department_id, visible_to_client } = req.body;
   if (!key || !label) return res.status(400).json({ error: 'key y label son requeridos' });
   try {
     const result = db.prepare(
-      'INSERT INTO package_checklist_items (key, label, sort_order) VALUES (?, ?, ?)'
-    ).run(key, label, sort_order || 0);
+      'INSERT INTO package_checklist_items (key, label, sort_order, department_id, visible_to_client) VALUES (?, ?, ?, ?, ?)'
+    ).run(key, label, sort_order || 0, department_id || null, visible_to_client ? 1 : 0);
     res.status(201).json({
       id: result.lastInsertRowid,
       key, label,
-      sort_order: sort_order || 0
+      sort_order: sort_order || 0,
+      department_id: department_id || null,
+      visible_to_client: visible_to_client ? 1 : 0
     });
   } catch (e) {
     if (e.message.includes('UNIQUE')) return res.status(409).json({ error: 'La clave ya existe' });
@@ -105,15 +112,24 @@ router.post('/checklist-items', authMiddleware, adminOnly, (req, res) => {
 router.put('/checklist-items/:id', authMiddleware, adminOnly, (req, res) => {
   const item = db.prepare('SELECT id FROM package_checklist_items WHERE id = ?').get(req.params.id);
   if (!item) return res.status(404).json({ error: 'Elemento no encontrado' });
-  const { key, label, sort_order } = req.body;
+  const { key, label, sort_order, department_id, visible_to_client } = req.body;
   try {
     db.prepare(`
       UPDATE package_checklist_items
       SET key = COALESCE(?, key),
           label = COALESCE(?, label),
-          sort_order = COALESCE(?, sort_order)
+          sort_order = COALESCE(?, sort_order),
+          department_id = ?,
+          visible_to_client = COALESCE(?, visible_to_client)
       WHERE id = ?
-    `).run(key || null, label || null, sort_order !== undefined ? sort_order : null, req.params.id);
+    `).run(
+      key || null,
+      label || null,
+      sort_order !== undefined ? sort_order : null,
+      'department_id' in req.body ? (department_id || null) : item.department_id,
+      visible_to_client !== undefined ? (visible_to_client ? 1 : 0) : null,
+      req.params.id
+    );
     res.json({ message: 'Elemento actualizado' });
   } catch (e) {
     if (e.message.includes('UNIQUE')) return res.status(409).json({ error: 'La clave ya existe' });

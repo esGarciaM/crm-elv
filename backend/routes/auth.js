@@ -22,22 +22,22 @@ router.post('/login', (req, res) => {
   }
   const token = generateToken(user);
   const modules = getUserModules(user.id);
-  res.json({ token, user: { id: user.id, username: user.username, name: user.name, role: user.role, modules } });
+  res.json({ token, user: { id: user.id, username: user.username, name: user.name, role: user.role, department_id: user.department_id, modules } });
 });
 
 router.get('/me', authMiddleware, (req, res) => {
-  const user = db.prepare('SELECT id, username, name, role, profile_id, created_at FROM users WHERE id = ?').get(req.user.id);
+  const user = db.prepare('SELECT u.id, u.username, u.name, u.role, u.profile_id, u.department_id, d.name AS department_name, u.created_at FROM users u LEFT JOIN departments d ON d.id = u.department_id WHERE u.id = ?').get(req.user.id);
   user.modules = getUserModules(req.user.id);
   res.json(user);
 });
 
 router.get('/', authMiddleware, adminOnly, (req, res) => {
-  const users = db.prepare('SELECT id, username, name, role, active, profile_id, created_at FROM users ORDER BY name').all();
+  const users = db.prepare('SELECT u.id, u.username, u.name, u.role, u.active, u.profile_id, u.department_id, d.name AS department_name, u.created_at FROM users u LEFT JOIN departments d ON d.id = u.department_id ORDER BY u.name').all();
   res.json(users);
 });
 
 router.post('/', authMiddleware, adminOnly, (req, res) => {
-  const { username, password, name, role } = req.body;
+  const { username, password, name, role, department_id } = req.body;
   if (!username || !password || !name) {
     return res.status(400).json({ error: 'Usuario, contraseña y nombre requeridos' });
   }
@@ -46,8 +46,8 @@ router.post('/', authMiddleware, adminOnly, (req, res) => {
     return res.status(409).json({ error: 'El usuario ya existe' });
   }
   const hash = bcrypt.hashSync(password, 10);
-  const result = db.prepare('INSERT INTO users (username, password, name, role) VALUES (?, ?, ?, ?)').run(username, hash, name, role || 'user');
-  res.status(201).json({ id: result.lastInsertRowid, username, name, role: role || 'user' });
+  const result = db.prepare('INSERT INTO users (username, password, name, role, department_id) VALUES (?, ?, ?, ?, ?)').run(username, hash, name, role || 'user', department_id || null);
+  res.status(201).json({ id: result.lastInsertRowid, username, name, role: role || 'user', department_id: department_id || null });
 });
 
 router.put('/profile', authMiddleware, (req, res) => {
@@ -80,7 +80,7 @@ router.put('/profile', authMiddleware, (req, res) => {
 });
 
 router.put('/:id', authMiddleware, adminOnly, (req, res) => {
-  const { name, role, active, password, profile_id } = req.body;
+  const { name, role, active, password, profile_id, department_id } = req.body;
   const user = db.prepare('SELECT id FROM users WHERE id = ?').get(req.params.id);
   if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
 
@@ -90,6 +90,7 @@ router.put('/:id', authMiddleware, adminOnly, (req, res) => {
   if (role !== undefined) { updates.push('role = ?'); params.push(role); }
   if (active !== undefined) { updates.push('active = ?'); params.push(active ? 1 : 0); }
   if (profile_id !== undefined) { updates.push('profile_id = ?'); params.push(profile_id || null); }
+  if (department_id !== undefined) { updates.push('department_id = ?'); params.push(department_id || null); }
   if (password) {
     updates.push('password = ?');
     params.push(bcrypt.hashSync(password, 10));

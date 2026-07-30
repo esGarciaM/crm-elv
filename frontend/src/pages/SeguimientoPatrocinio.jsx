@@ -125,10 +125,16 @@ export default function SeguimientoPatrocinio() {
   if (error) return <div className="error-msg" style={{ margin: '2rem' }}>{error}</div>;
   if (!data) return null;
 
-  const { patrocinio, items, comments } = data;
+  const { patrocinio, items, comments, user_department_id } = data;
   const progress = items.length > 0
     ? Math.round((items.filter(i => i.completed).length / items.length) * 100)
     : 0;
+
+  const canEditItem = (item) => {
+    if (isAdmin) return true;
+    if (!item.department_id) return true;
+    return item.department_id === user_department_id;
+  };
 
   return (
     <div className="seguimiento-page">
@@ -176,27 +182,33 @@ export default function SeguimientoPatrocinio() {
               </div>
 
               <div className="checklist-items">
-                {items.map((item) => (
-                  <label
-                    key={item.id}
-                    className={`checklist-item ${item.completed ? 'completed' : ''}`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={item.completed}
-                      disabled={togglingItem === item.id}
-                      onChange={() => toggleItem(item.id, item.completed)}
-                    />
-                    <span className="checklist-item-label">{item.label}</span>
-                    {item.completed && item.completed_at && (
-                      <span className="checklist-item-date">
-                        {new Date(item.completed_at + 'Z').toLocaleDateString('es-MX', {
-                          day: 'numeric', month: 'short'
-                        })}
-                      </span>
-                    )}
-                  </label>
-                ))}
+                {items.map((item) => {
+                  const editable = canEditItem(item);
+                  return (
+                    <label
+                      key={item.id}
+                      className={`checklist-item ${item.completed ? 'completed' : ''} ${!editable ? 'readonly' : ''}`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={item.completed}
+                        disabled={!editable || togglingItem === item.id}
+                        onChange={() => toggleItem(item.id, item.completed)}
+                      />
+                      <span className="checklist-item-label">{item.label}</span>
+                      {!!item.visible_to_client && (
+                        <span className="checklist-item-badge client">Cliente</span>
+                      )}
+                      {item.completed && item.completed_at && (
+                        <span className="checklist-item-date">
+                          {new Date(item.completed_at + 'Z').toLocaleDateString('es-MX', {
+                            day: 'numeric', month: 'short'
+                          })}
+                        </span>
+                      )}
+                    </label>
+                  );
+                })}
               </div>
             </>
           )}

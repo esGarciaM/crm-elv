@@ -116,7 +116,20 @@ router.get('/', authMiddleware, (req, res) => {
 
 // ─── GET /kanban — Datos para tablero Kanban ─────────────────
 router.get('/kanban', authMiddleware, (req, res) => {
-  const statuses = db.prepare('SELECT * FROM sponsor_statuses ORDER BY sort_order ASC').all();
+  const user = db.prepare('SELECT profile_id FROM users WHERE id = ?').get(req.user.id);
+
+  let statuses;
+  if (user && user.profile_id && req.user.role !== 'admin') {
+    statuses = db.prepare(`
+      SELECT ss.* FROM sponsor_statuses ss
+      INNER JOIN profile_sponsor_statuses pss ON pss.sponsor_status_id = ss.id
+      WHERE pss.profile_id = ?
+      ORDER BY ss.sort_order ASC
+    `).all(user.profile_id);
+  } else {
+    statuses = db.prepare('SELECT * FROM sponsor_statuses ORDER BY sort_order ASC').all();
+  }
+
   const patrocinios = db.prepare(`
     SELECT p.id, p.company_name, p.contact_person, p.phone, p.package, p.sponsorship_type, p.sponsor_status_id, p.payment_status
     FROM patrocinios p
@@ -192,6 +205,15 @@ router.put('/kanban/status', authMiddleware, (req, res) => {
 
   const status = db.prepare('SELECT id FROM sponsor_statuses WHERE id = ?').get(sponsor_status_id);
   if (!status) return res.status(404).json({ error: 'Status no encontrado' });
+
+  // Check if user's profile has access to this status
+  if (req.user.role !== 'admin') {
+    const user = db.prepare('SELECT profile_id FROM users WHERE id = ?').get(req.user.id);
+    if (user && user.profile_id) {
+      const hasAccess = db.prepare('SELECT 1 FROM profile_sponsor_statuses WHERE profile_id = ? AND sponsor_status_id = ?').get(user.profile_id, sponsor_status_id);
+      if (!hasAccess) return res.status(403).json({ error: 'No tienes acceso a este estatus' });
+    }
+  }
 
   db.prepare("UPDATE patrocinios SET sponsor_status_id = ?, updated_at = datetime('now','localtime'), updated_by = ? WHERE id = ?").run(sponsor_status_id, req.user.id, patrocinio_id);
   res.json({ message: 'Status actualizado' });

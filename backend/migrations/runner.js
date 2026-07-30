@@ -22,24 +22,26 @@ export function runMigrations(db) {
     .filter(f => f.endsWith('.sql'))
     .sort();
 
-  const run = db.transaction(() => {
-    for (const file of files) {
-      if (applied.has(file)) continue;
+  for (const file of files) {
+    if (applied.has(file)) continue;
 
-      const sql = fs.readFileSync(join(__dirname, file), 'utf-8');
-      const statements = sql
-        .split(';')
-        .map(s => s.trim())
-        .filter(s => s.length > 0);
+    const sql = fs.readFileSync(join(__dirname, file), 'utf-8');
+    const statements = sql
+      .split(';')
+      .map(s => s.trim())
+      .filter(s => s.length > 0);
 
-      for (const stmt of statements) {
-        db.exec(stmt);
-      }
-
-      db.prepare('INSERT INTO _migrations (name) VALUES (?)').run(file);
+    try {
+      const apply = db.transaction(() => {
+        for (const stmt of statements) {
+          db.exec(stmt);
+        }
+        db.prepare('INSERT INTO _migrations (name) VALUES (?)').run(file);
+      });
+      apply();
       console.log(`Migration applied: ${file}`);
+    } catch (err) {
+      console.error(`Migration failed: ${file} — ${err.message}`);
     }
-  });
-
-  run();
+  }
 }

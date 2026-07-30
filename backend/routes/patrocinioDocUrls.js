@@ -15,7 +15,7 @@ if (!fs.existsSync(DOC_DIR)) fs.mkdirSync(DOC_DIR, { recursive: true });
 const ALLOWED_VARS = [
   'Nombre', 'Contacto', 'Telefono', 'Tipo', 'Paquete', 'Estatus',
   'EstadoVisita', 'EstadoPago', 'DetalleEspecie', 'DetallePago',
-  'RedesSociales', 'Boletos', 'Logo', 'Notas', 'Fecha'
+  'RedesSociales', 'Boletos', 'Logo', 'Notas', 'Fecha', 'Folio'
 ];
 
 const VAR_MAP = {
@@ -34,6 +34,7 @@ function renderTemplate(template, patrocinio) {
     html = html.replaceAll(`{{${varName}}}`, val);
   }
   html = html.replaceAll(/\{\{Fecha\}\}/g, new Date().toLocaleDateString('es-MX'));
+  html = html.replaceAll(/\{\{Folio\}\}/g, 'FOLIO-' + String(patrocinio.id).padStart(4, '0'));
   html = html.replaceAll(/\{\{[A-Za-z]+\}\}/g, '');
   return html;
 }
@@ -109,7 +110,24 @@ function stripDocTypeName(html, typeName) {
   return html.replace(re, '');
 }
 
-function wrapInDocument(bodyHtml, title) {
+function wrapInDocument(bodyHtml, title, watermarkUrl) {
+  const watermarkStyle = watermarkUrl ? `
+  .watermark {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: -1;
+    pointer-events: none;
+    overflow: hidden;
+  }
+  .watermark img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }` : '';
+
+  const watermarkHtml = watermarkUrl ? `<div class="watermark"><img src="${watermarkUrl}" alt=""></div>` : '';
+
   return `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -117,16 +135,19 @@ function wrapInDocument(bodyHtml, title) {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${sanitizeHtml(title, { allowedTags: [] })}</title>
 <style>
-  body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 800px; margin: 2rem auto; padding: 0 1.5rem; color: #1a1a1a; line-height: 1.6; }
+  @page { size: A4; margin: 2cm; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 800px; margin: 2rem auto; padding: 2rem 2.5rem; color: #1a1a1a; line-height: 1.6; }
   h1 { font-size: 1.5rem; border-bottom: 2px solid #333; padding-bottom: .5rem; }
   h2 { font-size: 1.2rem; margin-top: 1.5rem; }
   table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
   th, td { border: 1px solid #ccc; padding: .5rem .75rem; text-align: left; }
   th { background: #f5f5f5; }
-  @media print { body { margin: 0; padding: 1rem; } }
+  @media print { body { margin: 0; padding: 4cm 3cm; min-height: 100vh; box-sizing: border-box; } }
+  ${watermarkStyle}
 </style>
 </head>
 <body>
+${watermarkHtml}
 ${bodyHtml}
 </body>
 </html>`;
@@ -182,7 +203,7 @@ router.post('/:patrocinioId/generate', authMiddleware, (req, res) => {
 
   const filled = renderTemplate(docType.template_body, patrocinio);
   const safeHtml = stripDocTypeName(htmlToSafeHtml(filled), docType.name);
-  const fullHtml = wrapInDocument(safeHtml, docType.name);
+  const fullHtml = wrapInDocument(safeHtml, docType.name, docType.watermark_url);
 
   const filename = `${req.params.patrocinioId}_${document_type_id}.html`;
   const filePath = join(DOC_DIR, filename);
@@ -208,9 +229,12 @@ router.put('/:patrocinioId/regenerate', authMiddleware, (req, res) => {
   const patrocinio = db.prepare('SELECT id FROM patrocinios WHERE id = ?').get(req.params.patrocinioId);
   if (!patrocinio) return res.status(404).json({ error: 'Patrocinio no encontrado' });
 
-  const safeHtml = htmlToSafeHtml(html);
+  const docType = db.prepare('SELECT watermark_url FROM document_types WHERE id = ?').get(document_type_id);
 
-  const fullHtml = wrapInDocument(safeHtml, 'Documento');
+  const cleaned = html.replace(/<div\s+class="watermark"[^>]*>.*?<\/div>/gis, '');
+  const safeHtml = htmlToSafeHtml(cleaned);
+
+  const fullHtml = wrapInDocument(safeHtml, docType ? docType.name || 'Documento' : 'Documento', docType?.watermark_url);
 
   const filename = `${req.params.patrocinioId}_${document_type_id}.html`;
   const filePath = join(DOC_DIR, filename);
