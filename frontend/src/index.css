@@ -2055,6 +2055,25 @@ input, select, textarea, .search-input,
   font-style: normal;
 }
 
+.quill-editor-wrapper .ql-editor hr.page-break {
+  border: none;
+  border-top: 2px dashed #b8bec8;
+  margin: 1.25rem 0;
+  background: none;
+}
+
+.quill-editor-wrapper .ql-toolbar .ql-pageBreak {
+  width: auto;
+  padding: 0 6px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--text-light);
+}
+
+.quill-editor-wrapper .ql-toolbar .ql-pageBreak::before {
+  content: 'Salto de página ⤓';
+}
+
 /* Quill dark theme */
 [data-theme="dark"] .quill-editor-wrapper {
   border-color: #30363d;

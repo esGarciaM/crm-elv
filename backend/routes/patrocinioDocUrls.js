@@ -44,11 +44,12 @@ const RICH_TEXT_ALLOWED_TAGS = [
   'p', 'br', 'strong', 'em', 'u', 's', 'sub', 'sup',
   'ul', 'ol', 'li',
   'table', 'thead', 'tbody', 'tr', 'th', 'td',
-  'img', 'a', 'span', 'div',
+  'img', 'a', 'span', 'div', 'hr',
   'blockquote', 'pre', 'code'
 ];
 
 const RICH_TEXT_ALLOWED_ATTRS = {
+  '*': ['class'],
   'img': ['src', 'alt', 'width', 'height', 'style'],
   'a': ['href', 'target', 'rel'],
   'span': ['style'],
@@ -110,23 +111,67 @@ function stripDocTypeName(html, typeName) {
   return html.replace(re, '');
 }
 
-function wrapInDocument(bodyHtml, title, watermarkUrl) {
-  const watermarkStyle = watermarkUrl ? `
-  .watermark {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    z-index: -1;
-    pointer-events: none;
-    overflow: hidden;
-  }
-  .watermark img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-  }` : '';
+function flattenPrintPages(html) {
+  const openRe = /<div\b[^>]*class=["'][^"']*\bprint-page\b[^"']*["'][^>]*>/gi;
+  if (!openRe.test(html)) return html;
+  openRe.lastIndex = 0;
 
-  const watermarkHtml = watermarkUrl ? `<div class="watermark"><img src="${watermarkUrl}" alt=""></div>` : '';
+  const divRe = /<div\b[^>]*>|<\/div>/gi;
+  const isWrapper = /class=["'][^"']*\bprint-page\b[^"']*["']/i;
+
+  const root = [];
+  const stack = [];
+  let textBuf = '';
+  let last = 0;
+
+  const flush = () => {
+    if (textBuf) {
+      const target = stack.length ? stack[stack.length - 1].chunks : root;
+      target.push(textBuf);
+      textBuf = '';
+    }
+  };
+
+  let m;
+  while ((m = divRe.exec(html)) !== null) {
+    const token = m[0];
+    if (token[1] !== '/') {
+      textBuf += html.slice(last, m.index);
+      flush();
+      stack.push({ isWrapper: isWrapper.test(token), openTag: token, chunks: [] });
+    } else {
+      textBuf += html.slice(last, m.index);
+      flush();
+      const open = stack.pop();
+      if (!open) continue;
+      const content = open.chunks.join('');
+      const rebuilt = open.isWrapper ? content : (open.openTag + content + token);
+      if (stack.length) {
+        stack[stack.length - 1].chunks.push(rebuilt);
+        if (open.isWrapper) stack[stack.length - 1].chunks.push('<hr class="page-break">');
+      } else {
+        root.push(rebuilt);
+        if (open.isWrapper) root.push('<hr class="page-break">');
+      }
+    }
+    last = m.index + token.length;
+  }
+  textBuf += html.slice(last);
+  flush();
+
+  return root.join('').replace(/(<hr class="page-break">)+$/i, '');
+}
+
+function splitIntoPages(bodyHtml) {
+  const flattened = flattenPrintPages(bodyHtml);
+  const parts = flattened.split(/<hr[^>]*class=["'][^"']*page-break[^"']*["'][^>]*>/gi);
+  return parts.map(p => p.trim()).filter(Boolean);
+}
+
+function wrapInDocument(bodyHtml, title, watermarkUrl) {
+  const pages = splitIntoPages(bodyHtml).map(p => `<div class="print-page">${p}</div>`).join('\n') || bodyHtml;
+
+  const watermarkBg = watermarkUrl ? `#fff url('${watermarkUrl}') center / cover no-repeat` : '#fff';
 
   return `<!DOCTYPE html>
 <html lang="es">
@@ -135,20 +180,45 @@ function wrapInDocument(bodyHtml, title, watermarkUrl) {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>${sanitizeHtml(title, { allowedTags: [] })}</title>
 <style>
-  @page { size: A4; margin: 2cm; }
-  body { font-family: 'Segoe UI', Arial, sans-serif; max-width: 800px; margin: 2rem auto; padding: 2rem 2.5rem; color: #1a1a1a; line-height: 1.6; }
+  * { box-sizing: border-box; }
+  @page { size: A4; margin: 8.9mm 6.3mm; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #eef0f2; margin: 0; padding: 1.5rem; color: #1a1a1a; line-height: 1.6; }
+  .print-page {
+    width: 21cm;
+    min-height: 29.6cm;
+    margin: 0 auto 1.5rem;
+    padding: 4cm 3cm;
+    background: ${watermarkBg};
+    box-shadow: 0 1px 6px rgba(0,0,0,.15);
+    word-wrap: break-word;
+  }
   h1 { font-size: 1.5rem; border-bottom: 2px solid #333; padding-bottom: .5rem; }
   h2 { font-size: 1.2rem; margin-top: 1.5rem; }
   table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
   th, td { border: 1px solid #ccc; padding: .5rem .75rem; text-align: left; }
   th { background: #f5f5f5; }
-  @media print { body { margin: 0; padding: 4cm 3cm; min-height: 100vh; box-sizing: border-box; } }
-  ${watermarkStyle}
+  hr.page-break { border: none; margin: 0; }
+  @media print {
+    body { background: none; padding: 0; }
+    .print-page {
+      width: auto;
+      min-height: 27.8cm;
+      margin: 0;
+      padding: 4cm 3cm;
+      box-shadow: none;
+      background: ${watermarkBg};
+      page-break-after: always;
+      break-after: page;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .print-page:last-child { page-break-after: auto; break-after: auto; }
+    hr.page-break { display: none; }
+  }
 </style>
 </head>
 <body>
-${watermarkHtml}
-${bodyHtml}
+${pages}
 </body>
 </html>`;
 }
