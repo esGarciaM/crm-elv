@@ -182,7 +182,14 @@ function wrapInDocument(bodyHtml, title, watermarkUrl) {
 <style>
   * { box-sizing: border-box; }
   @page { size: A4; margin: 8.9mm 6.3mm; }
-  body { font-family: 'Segoe UI', Arial, sans-serif; background: #eef0f2; margin: 0; padding: 1.5rem; color: #1a1a1a; line-height: 1.6; }
+  body {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background: #eef0f2;
+    margin: 0;
+    /* padding: 1.5rem; */
+    color: #1a1a1a;
+    /* line-height: 1.6; */
+  }
   .print-page {
     width: 21cm;
     min-height: 29.6cm;
