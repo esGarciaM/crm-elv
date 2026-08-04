@@ -181,7 +181,7 @@ function wrapInDocument(bodyHtml, title, watermarkUrl) {
 <title>${sanitizeHtml(title, { allowedTags: [] })}</title>
 <style>
   * { box-sizing: border-box; }
-  @page { size: A4; margin: 0; }
+  @page { size: A4; margin: 8.9mm 6.3mm; }
   body { font-family: 'Segoe UI', Arial, sans-serif; background: #eef0f2; margin: 0; padding: 1.5rem; color: #1a1a1a; line-height: 1.6; }
   .print-page {
     width: 21cm;
@@ -202,7 +202,7 @@ function wrapInDocument(bodyHtml, title, watermarkUrl) {
     body { background: none; padding: 0; }
     .print-page {
       width: auto;
-      min-height: 29.6cm;
+      min-height: 27.8cm;
       margin: 0;
       padding: 4cm 3cm;
       box-shadow: none;
