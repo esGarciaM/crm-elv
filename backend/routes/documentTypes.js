@@ -33,10 +33,11 @@ function sanitizeTemplate(body) {
       'p', 'br', 'strong', 'em', 'u', 's', 'sub', 'sup',
       'ul', 'ol', 'li',
       'table', 'thead', 'tbody', 'tr', 'th', 'td',
-      'img', 'a', 'span', 'div',
+      'img', 'a', 'span', 'div', 'hr',
       'blockquote', 'pre', 'code'
     ],
     allowedAttributes: {
+      '*': ['class'],
       'img': ['src', 'alt', 'width', 'height', 'style'],
       'a': ['href', 'target', 'rel'],
       'span': ['style'],

@@ -7,21 +7,41 @@ import api from '../api';
 
 Quill.register('modules/imageResize', ImageResize);
 
+const BlockEmbed = Quill.import('blots/block/embed');
+class PageBreakBlot extends BlockEmbed {}
+PageBreakBlot.blotName = 'pageBreak';
+PageBreakBlot.tagName = 'hr';
+PageBreakBlot.className = 'page-break';
+Quill.register(PageBreakBlot);
+
 const QUILL_MODULES = {
   imageResize: {},
-  toolbar: [
-    [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
-    [{ 'font': [] }],
-    [{ 'size': ['small', false, 'large', 'huge'] }],
-    ['bold', 'italic', 'underline', 'strike'],
-    [{ 'color': [] }, { 'background': [] }],
-    [{ 'align': [] }],
-    ['blockquote', 'code-block'],
-    [{ 'list': 'ordered' }, { 'list': 'bullet' }],
-    [{ 'indent': '-1' }, { 'indent': '+1' }],
-    ['link', 'image'],
-    ['clean']
-  ]
+  toolbar: {
+    container: [
+      [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+      [{ 'font': [] }],
+      [{ 'size': ['small', false, 'large', 'huge'] }],
+      ['bold', 'italic', 'underline', 'strike'],
+      [{ 'color': [] }, { 'background': [] }],
+      [{ 'align': [] }],
+      ['blockquote', 'code-block'],
+      [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+      [{ 'indent': '-1' }, { 'indent': '+1' }],
+      ['link', 'image'],
+      ['pageBreak'],
+      ['clean']
+    ],
+    handlers: {
+      pageBreak() {
+        const quill = this.quill;
+        const range = quill.getSelection(true);
+        const index = range.index;
+        quill.insertEmbed(index, 'pageBreak', true, Quill.sources.USER);
+        quill.insertText(index + 1, '\n', Quill.sources.USER);
+        quill.setSelection(index + 2, 0);
+      }
+    }
+  }
 };
 
 const QUILL_FORMATS = [
@@ -30,7 +50,8 @@ const QUILL_FORMATS = [
   'color', 'background', 'align',
   'blockquote', 'code-block',
   'list', 'indent',
-  'link', 'image'
+  'link', 'image',
+  'pageBreak'
 ];
 
 const TABS = [
