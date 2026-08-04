@@ -301,7 +301,10 @@ router.put('/:patrocinioId/regenerate', authMiddleware, (req, res) => {
 
   const docType = db.prepare('SELECT watermark_url FROM document_types WHERE id = ?').get(document_type_id);
 
-  const cleaned = html.replace(/<div\s+class="watermark"[^>]*>.*?<\/div>/gis, '');
+  const cleaned = html
+    .replace(/<!DOCTYPE[^>]*>/gi, '')
+    .replace(/<head[\s\S]*?<\/head>/gi, '')
+    .replace(/<div\s+class="watermark"[^>]*>.*?<\/div>/gis, '');
   const safeHtml = htmlToSafeHtml(cleaned);
 
   const fullHtml = wrapInDocument(safeHtml, docType ? docType.name || 'Documento' : 'Documento', docType?.watermark_url);
