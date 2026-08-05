@@ -204,6 +204,10 @@ function wrapInDocument(bodyHtml, title, watermarkUrl) {
   table { width: 100%; border-collapse: collapse; margin: 1rem 0; }
   th, td { border: 1px solid #ccc; padding: .5rem .75rem; text-align: left; }
   th { background: #f5f5f5; }
+  .ql-align-left { text-align: left; }
+  .ql-align-center { text-align: center; }
+  .ql-align-right { text-align: right; }
+  .ql-align-justify { text-align: justify; }
   hr.page-break { border: none; margin: 0; }
   @media print {
     body { background: none; padding: 0; }

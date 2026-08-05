@@ -13,6 +13,7 @@ const AVAILABLE_MODULES = [
   { key: 'disenos', label: 'Diseños' },
   { key: 'redes', label: 'Redes' },
   { key: 'logistica', label: 'Logística' },
+  { key: 'decoraciones', label: 'Decoraciones' },
   { key: 'audiovisual', label: 'Audiovisual' },
   { key: 'finance', label: 'Finanzas' },
   { key: 'communications', label: 'Comunicaciones' },

@@ -68,7 +68,7 @@ const TABS = [
 const MODULE_LABELS = {
   dashboard: 'Dashboard', clients: 'Clientes', tasks: 'Tareas',
   patrocinios: 'Patrocinios', kanban: 'Kanban', disenos: 'Diseños', redes: 'Redes',
-  logistica: 'Logística', audiovisual: 'Audiovisual', finance: 'Finanzas',
+  logistica: 'Logística', decoraciones: 'Decoraciones', audiovisual: 'Audiovisual', finance: 'Finanzas',
   communications: 'Comunicaciones', users: 'Usuarios', settings: 'Configuración',
 };
 
