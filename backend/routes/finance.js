@@ -4,6 +4,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 import { randomUUID } from 'crypto';
 import fs from 'fs';
+import bcrypt from 'bcryptjs';
 import db from '../database.js';
 import { authMiddleware } from '../middleware/auth.js';
 
@@ -198,6 +199,48 @@ router.delete('/sponsorships/payments/:paymentId', authMiddleware, (req, res) =>
   const result = db.prepare('DELETE FROM sponsorship_payments WHERE id = ?').run(req.params.paymentId);
   if (result.changes === 0) return res.status(404).json({ error: 'Pago no encontrado' });
   res.json({ message: 'Pago eliminado' });
+});
+
+// ─── PUT /sponsorships/:id/payment-status — Cambio de estado de pago con validación de contraseña ───
+
+router.put('/sponsorships/:id/payment-status', authMiddleware, (req, res) => {
+  const { payment_status, password } = req.body;
+  const VALID_STATUSES = ['Pagado', 'Pendiente', 'Abonado', 'Cancelado'];
+
+  if (!payment_status || !VALID_STATUSES.includes(payment_status)) {
+    return res.status(400).json({ error: 'Estado de pago inválido' });
+  }
+  if (!password) {
+    return res.status(401).json({ error: 'Se requiere tu contraseña para validar el cambio' });
+  }
+
+  const patrocinio = db.prepare('SELECT id, payment_status FROM patrocinios WHERE id = ?').get(req.params.id);
+  if (!patrocinio) return res.status(404).json({ error: 'Patrocinio no encontrado' });
+
+  if ((patrocinio.payment_status || 'Pendiente') === payment_status) {
+    return res.status(400).json({ error: 'El estado de pago ya es el solicitado' });
+  }
+
+  const user = db.prepare('SELECT password FROM users WHERE id = ? AND active = 1').get(req.user.id);
+  if (!user || !bcrypt.compareSync(password, user.password)) {
+    return res.status(401).json({ error: 'Contraseña incorrecta. No se realizó el cambio.' });
+  }
+
+  db.transaction(() => {
+    db.prepare(`
+      UPDATE patrocinios
+      SET payment_status = ?, payment_status_updated_by = ?, payment_status_updated_at = datetime('now','localtime'),
+          updated_at = datetime('now','localtime')
+      WHERE id = ?
+    `).run(payment_status, req.user.id, req.params.id);
+
+    db.prepare(`
+      INSERT INTO payment_status_changes (patrocinio_id, old_status, new_status, changed_by)
+      VALUES (?, ?, ?, ?)
+    `).run(req.params.id, patrocinio.payment_status || null, payment_status, req.user.id);
+  })();
+
+  res.json({ message: 'Estado de pago actualizado correctamente' });
 });
 
 // ═══════════════════════════════════════════════════════════════════════════

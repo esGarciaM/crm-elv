@@ -246,6 +246,12 @@ function TabPatrocinios() {
   const [paymentHistory, setPaymentHistory] = useState({ payments: [], totalCash: 0, totalKind: 0, totalPaid: 0 });
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [error, setError] = useState('');
+  const [statusChange, setStatusChange] = useState(null);
+  const [statusPassword, setStatusPassword] = useState('');
+  const [statusError, setStatusError] = useState('');
+  const [savingStatus, setSavingStatus] = useState(false);
+
+  const PAYMENT_STATUSES = ['Pagado', 'Pendiente', 'Abonado', 'Cancelado'];
 
   const load = () => {
     const params = {};
@@ -320,6 +326,31 @@ function TabPatrocinios() {
     } catch (err) {
       alert('Error al eliminar pago');
     }
+  };
+
+  const openStatusModal = (patrocinio, newStatus) => {
+    const current = patrocinio.payment_status || 'Pendiente';
+    if (newStatus === current) return;
+    setStatusChange({ patrocinio, newStatus });
+    setStatusPassword('');
+    setStatusError('');
+  };
+
+  const handleStatusSubmit = async (e) => {
+    e.preventDefault();
+    if (!statusPassword) { setStatusError('Ingresa tu contraseña'); return; }
+    setSavingStatus(true); setStatusError('');
+    try {
+      await api.put(`/finance/sponsorships/${statusChange.patrocinio.id}/payment-status`, {
+        payment_status: statusChange.newStatus,
+        password: statusPassword
+      });
+      setStatusChange(null);
+      setStatusPassword('');
+      load();
+    } catch (err) {
+      setStatusError(err.response?.data?.error || 'Error al actualizar estado de pago');
+    } finally { setSavingStatus(false); }
   };
 
   return (
@@ -428,7 +459,15 @@ function TabPatrocinios() {
                     <td>{p.package || '—'}</td>
                     <td style={{ color: p.monetary_amount > 0 ? 'var(--success)' : 'var(--text-muted)', fontWeight: p.monetary_amount > 0 ? 600 : 400 }}>{fmt(p.monetary_amount)}</td>
                     <td style={{ color: p.in_kind_amount > 0 ? 'var(--warning)' : 'var(--text-muted)', fontWeight: p.in_kind_amount > 0 ? 600 : 400 }}>{fmt(p.in_kind_amount)}</td>
-                    <td><span className={`status-badge ${(p.payment_status || 'Pendiente').charAt(0).toUpperCase() + (p.payment_status || 'Pendiente').slice(1)}`}>{p.payment_status || 'Pendiente'}</span></td>
+                    <td>
+                      <select
+                        className="status-select"
+                        value={p.payment_status || 'Pendiente'}
+                        onChange={e => openStatusModal(p, e.target.value)}
+                      >
+                        {PAYMENT_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </td>
                     <td style={{ color: p.total_paid_cash > 0 ? 'var(--success)' : 'var(--text-muted)', fontWeight: p.total_paid_cash > 0 ? 600 : 400 }}>{fmt(p.total_paid_cash)}</td>
                     <td style={{ color: p.total_paid_kind > 0 ? 'var(--warning)' : 'var(--text-muted)', fontWeight: p.total_paid_kind > 0 ? 600 : 400 }}>{fmt(p.total_paid_kind)}</td>
                     <td>{p.visit_status || '—'}</td>
@@ -513,6 +552,44 @@ function TabPatrocinios() {
               </div>
             )}
             <button className="btn" style={{ marginTop: '1rem' }} onClick={() => setShowHistoryModal(false)}>Cerrar</button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Confirmación de Cambio de Estado de Pago */}
+      {statusChange && (
+        <div className="modal-overlay" onClick={() => setStatusChange(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 420 }}>
+            <h2>Confirmar cambio de estado</h2>
+            <p style={{ fontSize: '.9rem', marginBottom: '.75rem' }}>
+              <strong>{statusChange.patrocinio.company_name}</strong>
+            </p>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '.6rem', marginBottom: '1rem', fontSize: '.95rem' }}>
+              <span className="status-badge pending">{statusChange.patrocinio.payment_status || 'Pendiente'}</span>
+              <span>→</span>
+              <span className={`status-badge ${statusChange.newStatus === 'Pagado' ? 'success' : statusChange.newStatus === 'Cancelado' ? 'danger' : ''}`}>{statusChange.newStatus}</span>
+            </div>
+            {statusError && <div className="error-msg">{statusError}</div>}
+            <form onSubmit={handleStatusSubmit}>
+              <label style={{ fontSize: '.85rem', color: 'var(--text-light)', display: 'block', marginBottom: '.35rem' }}>
+                Ingresa tu contraseña para validar este cambio
+              </label>
+              <input
+                type="password"
+                placeholder="Tu contraseña"
+                autoFocus
+                autoComplete="current-password"
+                value={statusPassword}
+                onChange={e => setStatusPassword(e.target.value)}
+                style={{ width: '100%', padding: '.55rem .75rem', border: '1px solid var(--border)', borderRadius: 'var(--radius)', fontSize: '.9rem' }}
+              />
+              <div style={{ display: 'flex', gap: '.5rem', marginTop: '1rem' }}>
+                <button className="btn primary" type="submit" disabled={savingStatus || !statusPassword}>
+                  {savingStatus ? 'Validando...' : 'Confirmar cambio'}
+                </button>
+                <button className="btn" type="button" onClick={() => setStatusChange(null)}>Cancelar</button>
+              </div>
+            </form>
           </div>
         </div>
       )}
